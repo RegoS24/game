@@ -24,6 +24,18 @@ jobs:
           log-accepted-android-sdk-licenses: 'false'
       - name: Install Android build tools
         run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - name: Test inventory on desktop and mobile browsers
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node smoke-inventory.cjs
+      - name: Upload inventory screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: INVENTORY-PREVIEWS
+          path: |
+            black-signal-rin/inventory-desktop.png
+            black-signal-rin/inventory-mobile.png
       - name: Build APK
         run: bash build-apk.sh
       - name: Upload APK
@@ -35,5 +47,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="black-signal-rin-v0.3-${GITHUB_RUN_NUMBER}"
-          gh release create "$tag" out/BLACK-SIGNAL-RIN.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL RIN — v0.3 ($GITHUB_RUN_NUMBER)" --notes 'Android debug-signed build. Offline, landscape.' --prerelease
+          tag="black-signal-rin-v0.4-${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" out/BLACK-SIGNAL-RIN.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL RIN — v0.4 ($GITHUB_RUN_NUMBER)" --notes 'Android debug-signed build. Offline, landscape.' --prerelease
