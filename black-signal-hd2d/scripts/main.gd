@@ -19,6 +19,23 @@ var loading_time: float = 0.0
 var pos: Vector2 = Vector2(0,-10)
 var yaw: float = 0.0
 var yaw_target: float = 0.0
+var pitch: float=0.0
+var pitch_target: float=0.0
+const PITCH_MIN: float=-0.36
+const PITCH_MAX: float=0.62
+const RETICLE_Y: float=HORIZON+70.0
+var gyro_enabled: bool=true
+var gyro_sensitivity: float=1.0
+var gyro_swap: bool=false
+var gyro_invert_pitch: bool=false
+var gyro_invert_yaw: bool=false
+var gyro_rate: Vector2=Vector2.ZERO
+var gyro_bias: Vector3=Vector3.ZERO
+var gyro_calibration: float=0.0
+var gyro_calibration_sum: Vector3=Vector3.ZERO
+var gyro_samples: int=0
+const GYRO_LEVELS: Array[float]=[0.5,1.0,1.5,2.0,2.5]
+const GYRO_CONFIG: String="user://aim_settings.cfg"
 var camera: Vector2 = Vector2.ZERO
 var forward: Vector2 = Vector2(0,1)
 var right: Vector2 = Vector2(1,0)
@@ -48,10 +65,12 @@ var ui_status: String = ""
 var ui_timer: float = 0.0
 var action_rects: Dictionary = {"fire":Rect2(1146,444,104,104),"jump":Rect2(1156,575,80,62),"crouch":Rect2(1058,575,88,62),"prone":Rect2(960,575,88,62),"sprint":Rect2(220,575,84,62),"reload":Rect2(1150,350,100,58),"back":Rect2(16,16,115,39)}
 const JOY := Vector2(115,590)
+const GYRO_RECTS: Dictionary={"gyro":Rect2(395,60,126,42),"sensitivity":Rect2(530,60,113,42),"center":Rect2(652,60,114,42),"invert":Rect2(775,60,98,42),"axis":Rect2(882,60,101,42),"yaw_sign":Rect2(992,60,101,42)}
 
 func _ready() -> void:
  Engine.max_fps = 60
  texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+ load_aim_settings()
  # Avoid allocating all enemy textures while the lobby is being loaded.
  if DisplayServer.get_name() != "headless" and OS.has_feature("mobile"):
   get_window().mode = Window.MODE_FULLSCREEN
@@ -76,12 +95,104 @@ func build_world() -> void:
 func start_game() -> void:
  mode = "loading"; loading_time = 0.65
  pos = Vector2(0,-10); yaw = 0.0; yaw_target = 0.0; motion = Vector2.ZERO
+ pitch=0.0;pitch_target=0.0;gyro_rate=Vector2.ZERO
+ begin_gyro_calibration()
  anim = Animator.new(); touch_joy = Vector2.ZERO; joy_id = -1; aim_id = -1
  kills = 0; ammo = 12; reserve = 108; reload_time = 0.0; shoot_hold = false
  player_hp=100;player_hurt=0.0;encounter_clear=false;battle_time=0.0
  sprint_latch = false; fire_id = -1; shot_cool = 0.0; shot_flash = 0.0
  build_world(); update_camera()
  print("BLACK_SIGNAL_MOBS_READY: ",targets.size())
+
+func load_aim_settings() -> void:
+ var cfg:=ConfigFile.new()
+ if cfg.load(GYRO_CONFIG)!=OK:return
+ gyro_enabled=bool(cfg.get_value("aim","gyro",true))
+ gyro_sensitivity=clampf(float(cfg.get_value("aim","sensitivity",1.0)),0.5,2.5)
+ gyro_swap=bool(cfg.get_value("aim","swap",false))
+ gyro_invert_pitch=bool(cfg.get_value("aim","invert_pitch",false))
+ gyro_invert_yaw=bool(cfg.get_value("aim","invert_yaw",false))
+
+func save_aim_settings() -> void:
+ var cfg:=ConfigFile.new()
+ cfg.set_value("aim","gyro",gyro_enabled)
+ cfg.set_value("aim","sensitivity",gyro_sensitivity)
+ cfg.set_value("aim","swap",gyro_swap)
+ cfg.set_value("aim","invert_pitch",gyro_invert_pitch)
+ cfg.set_value("aim","invert_yaw",gyro_invert_yaw)
+ cfg.save(GYRO_CONFIG)
+
+func begin_gyro_calibration() -> void:
+ gyro_calibration=0.55
+ gyro_calibration_sum=Vector3.ZERO
+ gyro_samples=0
+ gyro_bias=Vector3.ZERO
+ gyro_rate=Vector2.ZERO
+
+func look_delta(delta: Vector2) -> void:
+ yaw_target+=delta.x*0.004
+ pitch_target=clampf(pitch_target+delta.y*0.004,PITCH_MIN,PITCH_MAX)
+
+func gyro_axes(raw: Vector3) -> Vector2:
+ # Godot reports device-axis radians/sec. Landscape orientation is fixed.
+ # Expose axis swap and sign switches for device-dependent sensor orientation.
+ var a:=Vector2(-raw.y,-raw.x)
+ if gyro_swap:a=Vector2(-raw.x,-raw.y)
+ if gyro_invert_pitch:a.y=-a.y
+ if gyro_invert_yaw:a.x=-a.x
+ return a
+
+func apply_gyro_delta(raw: Vector3,dt: float) -> void:
+ var sample: Vector2=gyro_axes(raw)
+ if absf(sample.x)<0.018:sample.x=0.0
+ if absf(sample.y)<0.018:sample.y=0.0
+ gyro_rate=gyro_rate.lerp(sample,1.0-exp(-dt*24.0))
+ yaw_target+=gyro_rate.x*dt*gyro_sensitivity
+ pitch_target=clampf(pitch_target+gyro_rate.y*dt*gyro_sensitivity,PITCH_MIN,PITCH_MAX)
+
+func update_gyro(dt: float) -> void:
+ if not OS.has_feature("mobile") or not gyro_enabled:
+  gyro_rate=Vector2.ZERO
+  return
+ var raw: Vector3=Input.get_gyroscope()
+ var step: float=minf(dt,0.05)
+ if gyro_calibration>0.0:
+  if raw.length()<0.18:
+   gyro_calibration_sum+=raw
+   gyro_samples+=1
+  gyro_calibration-=step
+  if gyro_calibration<=0.0 and gyro_samples>0:
+   gyro_bias=gyro_calibration_sum/float(gyro_samples)
+  return
+ apply_gyro_delta(raw-gyro_bias,step)
+
+func gyro_action(key: String) -> void:
+ match key:
+  "gyro":
+   gyro_enabled=not gyro_enabled
+   begin_gyro_calibration()
+   announce("ГИРОСКОП ВКЛЮЧЁН" if gyro_enabled else "ГИРОСКОП ВЫКЛЮЧЕН")
+  "sensitivity":
+   var index: int=0
+   for i in range(GYRO_LEVELS.size()):
+    if is_equal_approx(GYRO_LEVELS[i],gyro_sensitivity):index=i
+   gyro_sensitivity=GYRO_LEVELS[(index+1)%GYRO_LEVELS.size()]
+  "center":
+   pitch_target=0.0;pitch=0.0
+   yaw_target=yaw
+   begin_gyro_calibration()
+   announce("КАЛИБРОВКА — ДЕРЖИ ТЕЛЕФОН РОВНО")
+  "invert":gyro_invert_pitch=not gyro_invert_pitch
+  "axis":gyro_swap=not gyro_swap
+  "yaw_sign":gyro_invert_yaw=not gyro_invert_yaw
+ save_aim_settings()
+
+func view_horizon() -> float:
+ # Vertical off-axis projection; crosshair and all projected targets share it.
+ return HORIZON-tan(pitch)*F
+
+func reticle() -> Vector2:
+ return Vector2(W*0.5,RETICLE_Y)
 
 func update_camera() -> void:
  forward = Vector2(sin(yaw),cos(yaw))
@@ -105,7 +216,9 @@ func _process(dt: float) -> void:
   var strength: float=input_vector.length()
   input_vector = Vector2.ZERO if strength<0.10 else input_vector.normalized()*clampf((strength-0.10)/0.90,0.0,1.0)
   var sprint: bool = sprint_latch or Input.is_physical_key_pressed(KEY_SHIFT)
+  update_gyro(dt)
   yaw = lerp_angle(yaw,yaw_target,1.0-exp(-dt*18.0))
+  pitch=lerpf(pitch,pitch_target,1.0-exp(-dt*22.0))
   update_camera()
   var goal: Vector2 = (right*input_vector.x+forward*input_vector.y)*(5.8 if sprint else 3.1)*anim.speed_factor()
   motion = motion.lerp(goal,1.0-exp(-dt*(10.5 if goal.length()>motion.length() else 8.0)))
@@ -155,13 +268,7 @@ func fire() -> void:
  if mode!="game" or player_hp<=0 or shot_cool>0.0 or reload_time>0.0 or anim.jumping: return
  if ammo<=0: reload(); return
  ammo -= 1; shot_cool = 0.22; shot_flash = 0.08
- var best: int = -1; var nearest: float = 50.0
- for i in range(targets.size()):
-  if not targets[i].living(): continue
-  var rel: Vector2 = targets[i].p-pos
-  var depth: float = rel.dot(forward)
-  if depth>0 and depth<nearest and absf(rel.dot(right))<1.2+depth*0.025:
-   nearest=depth; best=i
+ var best: int=aim_target()
  if best >= 0:
   var target: Mob=targets[best]
   if target.take_hit():
@@ -171,6 +278,24 @@ func fire() -> void:
    else:announce(target.display_name()+" УНИЧТОЖЕН")
   else:announce("ПОПАДАНИЕ")
  if ammo == 0: reload()
+
+func aim_target() -> int:
+ var best: int=-1
+ var nearest: float=55.0
+ var cross: Vector2=reticle()
+ for i in range(targets.size()):
+  var mob: Mob=targets[i]
+  if not mob.living():continue
+  var dep: float=local_of(mob.p).y
+  if dep<=NEAR or dep>=nearest:continue
+  var foot: Vector2=project(mob.p)
+  var screen_h: float=mob.height()*F/dep
+  var radius: float=(0.86 if mob.kind==2 or mob.kind>=4 else 0.62)*F/dep+5.0
+  var bottom: float=foot.y+4.0
+  if mob.kind==5:bottom=foot.y-screen_h*.26
+  if absf(cross.x-foot.x)<=radius and cross.y>=foot.y-screen_h*1.10-4.0 and cross.y<=bottom:
+   nearest=dep;best=i
+ return best
 
 func reload() -> void:
  if ammo<12 and reserve>0 and reload_time<=0: reload_time=1.5
@@ -197,6 +322,8 @@ func _input(event: InputEvent) -> void:
    KEY_ESCAPE: activate("back")
    KEY_LEFT: yaw_target-=0.2
    KEY_RIGHT: yaw_target+=0.2
+   KEY_UP: pitch_target=clampf(pitch_target-0.12,PITCH_MIN,PITCH_MAX)
+   KEY_DOWN: pitch_target=clampf(pitch_target+0.12,PITCH_MIN,PITCH_MAX)
  if event is InputEventScreenTouch:
   if event.pressed: press_at(event.position,event.index)
   else: release_at(event.index)
@@ -208,7 +335,7 @@ func _input(event: InputEvent) -> void:
    else: release_at(99)
   elif event.button_index==MOUSE_BUTTON_RIGHT: mouse_look=event.pressed
  elif event is InputEventMouseMotion and not OS.has_feature("mobile"):
-  if mouse_look: yaw_target+=event.relative.x*0.004
+  if mouse_look: look_delta(event.relative)
   else: drag_at(event.position,event.relative,99)
 
 func press_at(p: Vector2,id: int) -> void:
@@ -220,6 +347,9 @@ func press_at(p: Vector2,id: int) -> void:
   if Rect2(945,540,310,92).has_point(p): start_game()
   return
  if mode!="game": return
+ for k in GYRO_RECTS:
+  if Rect2(GYRO_RECTS[k]).has_point(p):
+   gyro_action(str(k));return
  for k in action_rects:
   if Rect2(action_rects[k]).has_point(p):
    activate(str(k))
@@ -237,7 +367,7 @@ func release_at(id: int) -> void:
 
 func drag_at(p: Vector2, delta: Vector2,id: int) -> void:
  if id==joy_id: touch_joy=Vector2(p.x-JOY.x,JOY.y-p.y).limit_length(69.0)/69.0
- if id==aim_id: yaw_target+=delta.x*0.004
+ if id==aim_id: look_delta(delta)
 
 func local_of(p: Vector2) -> Vector2:
  var rel := p-camera
@@ -245,7 +375,7 @@ func local_of(p: Vector2) -> Vector2:
 
 func project(p: Vector2,height: float = 0.0) -> Vector2:
  var v := local_of(p); var dep: float = maxf(NEAR,v.y)
- return Vector2(W*0.5+v.x*F/dep,HORIZON+(3.1-height)*F/dep)
+ return Vector2(W*0.5+v.x*F/dep,view_horizon()+(3.1-height)*F/dep)
 
 func ground_poly(points: Array[Vector2], color: Color) -> void:
  var loc: Array[Vector2] = []
@@ -257,7 +387,7 @@ func ground_poly(points: Array[Vector2], color: Color) -> void:
   if (a.y>=NEAR)!=(b.y>=NEAR): clipped.append(a.lerp(b,(NEAR-a.y)/(b.y-a.y)))
  if clipped.size()<3: return
  var screen: PackedVector2Array = []
- for p in clipped: screen.append(Vector2(W*.5+p.x*F/p.y,HORIZON+3.1*F/p.y))
+ for p in clipped: screen.append(Vector2(W*.5+p.x*F/p.y,view_horizon()+3.1*F/p.y))
  if Geometry2D.triangulate_polygon(screen).size()>0:
   draw_colored_polygon(screen,color)
 
@@ -274,14 +404,17 @@ func button(rect: Rect2, text: String, active: bool=false) -> void:
 
 func draw_city() -> void:
  # Painted-looking 2D sky silhouette and perspective strips. No 3D geometry.
+ var horizon: float=view_horizon()
+ var sky_h: float=clampf(horizon,0.0,H)
  for i in range(32):
-  var v: float=float(i)/32.0; draw_rect(Rect2(0,v*HORIZON,W,HORIZON/32+1),Color("080f24").lerp(Color("30234b"),v))
+  var v: float=float(i)/32.0
+  if sky_h>0.0:draw_rect(Rect2(0,v*sky_h,W,sky_h/32+1),Color("080f24").lerp(Color("30234b"),v))
  for i in range(42):
   var x: float=fposmod(float(i)*97.0-yaw*100.0,1450.0)-85.0
   var h: float=30.0+float((i*137)%145)
-  draw_rect(Rect2(x,HORIZON-h,35+float((i*31)%50),h),Color("111829"))
-  draw_line(Vector2(x+5,HORIZON-h+4),Vector2(x+5,HORIZON-6),Color(0.24,0.63,0.74,0.22),2)
- draw_rect(Rect2(0,HORIZON,W,H-HORIZON),Color("18222f"))
+  draw_rect(Rect2(x,horizon-h,35+float((i*31)%50),h),Color("111829"))
+  draw_line(Vector2(x+5,horizon-h+4),Vector2(x+5,horizon-6),Color(0.24,0.63,0.74,0.22),2)
+ draw_rect(Rect2(0,sky_h,W,H-sky_h),Color("18222f"))
  # Draw road, sidewalk, lane edges and dashed markings using math on Vector2 coordinates.
  ground_poly([Vector2(-10,-120),Vector2(10,-120),Vector2(10,320),Vector2(-10,320)],Color("313849"))
  ground_poly([Vector2(-5.9,-120),Vector2(5.9,-120),Vector2(5.9,320),Vector2(-5.9,320)],Color("202533"))
@@ -347,7 +480,7 @@ func draw_enemy(mob: Mob,foot: Vector2,scale_factor: float) -> void:
  draw_set_transform(foot,0,Vector2(1.0,0.26))
  draw_circle(Vector2.ZERO,shadow,Color(0.02,0.02,0.05,0.48))
  draw_set_transform(Vector2.ZERO)
- mob.paint(self,foot,h,(pos-mob.p).dot(right)>0.0)
+ mob.paint(self,foot,h,camera-mob.p,right)
  if not mob.living():return
  if mob.attack_flash>0.0 and mob.kind!=0 and mob.kind!=4:
   draw_line(foot-Vector2(0,h*0.53),project(pos,1.15),Color(1.0,0.35,0.30,mob.attack_flash*4.0),1.8,true)
@@ -376,7 +509,7 @@ func _draw() -> void:
  var recoil := Vector2(-shot_flash*30.0,shot_flash*55.0)
  anim.paint(self,foot,sc,recoil)
  if shot_flash>0:
-  draw_circle(foot+Vector2(-38,-105),12*shot_flash/.08,Color("ffda9a"));draw_line(foot+Vector2(-38,-105),Vector2(W*.5,HORIZON+70),Color(1,.8,.4,shot_flash*5),2)
+  draw_circle(foot+Vector2(-38,-105),12*shot_flash/.08,Color("ffda9a"));draw_line(foot+Vector2(-38,-105),reticle(),Color(1,.8,.4,shot_flash*5),2)
  draw_hud()
  if player_hurt>0.0:draw_rect(Rect2(0,0,W,H),Color(0.8,0.04,0.08,player_hurt*0.40))
  if mode=="defeat":
@@ -402,7 +535,19 @@ func draw_hud() -> void:
  panel(Rect2(430,595,425,95));text_at(Vector2(449,621),"K-9   /   "+anim.state_label(),17,GOLD);text_at(Vector2(449,654),"%02d  /  %d"%[ammo,reserve],28);draw_rect(Rect2(449,669,386,6),Color("392334"));draw_rect(Rect2(449,669,386*float(player_hp)/100.0,6),CYAN if player_hp>30 else PINK);text_at(Vector2(700,653),str(player_hp)+" HP",16,CYAN)
  if reload_time>0: draw_rect(Rect2(449,680,386*(1-reload_time/1.5),4),GOLD)
  if ui_timer>0: text_at(Vector2(540,123),ui_status,21,GOLD)
- var aim:=Vector2(W*.5,HORIZON+70);draw_arc(aim,13,0,TAU,32,Color(1,1,1,.65),1.4,true);draw_line(aim-Vector2(18,0),aim+Vector2(18,0),Color(1,1,1,.55),1);draw_line(aim-Vector2(0,18),aim+Vector2(0,18),Color(1,1,1,.55),1)
+ button(GYRO_RECTS["gyro"],"ГИРО "+("ВКЛ" if gyro_enabled else "ВЫКЛ"),gyro_enabled)
+ button(GYRO_RECTS["sensitivity"],"×%.1f"%gyro_sensitivity)
+ button(GYRO_RECTS["center"],"ЦЕНТР")
+ button(GYRO_RECTS["invert"],"ВЕРТ. ±",gyro_invert_pitch)
+ button(GYRO_RECTS["axis"],"ОСИ XY",gyro_swap)
+ button(GYRO_RECTS["yaw_sign"],"ГОР. ±",gyro_invert_yaw)
+ var aim: Vector2=reticle()
+ var aim_color: Color=PINK if aim_target()>=0 else Color(1,1,1,.76)
+ draw_arc(aim,13,0,TAU,32,aim_color,1.4,true)
+ draw_line(aim-Vector2(22,0),aim-Vector2(6,0),aim_color,1.3,true)
+ draw_line(aim+Vector2(6,0),aim+Vector2(22,0),aim_color,1.3,true)
+ draw_line(aim-Vector2(0,22),aim-Vector2(0,6),aim_color,1.3,true)
+ draw_line(aim+Vector2(0,6),aim+Vector2(0,22),aim_color,1.3,true)
 
 func run_smoke() -> void:
  start_game(); mode="game"
@@ -429,6 +574,12 @@ func run_smoke() -> void:
   var unit: Mob=targets[i]
   assert(unit.kind==i and unit.max_hp>0 and unit.texture!=null)
   assert(unit.texture.get_width()==1152 and unit.texture.get_height()==3360)
+  assert(unit.direction_texture!=null and unit.direction_texture.get_width()==1152 and unit.direction_texture.get_height()==2688)
+  unit.heading=Vector2(0,-1)
+  assert(unit.view_for(Vector2(0,-1))==Mob.FRONT)
+  assert(unit.view_for(Vector2(1,0))==Mob.SIDE)
+  assert(unit.view_for(Vector2(0,1))==Mob.BACK)
+  assert(unit.directional_rect(Mob.BACK,Mob.RUN,.5).end.y<=2688.0)
   assert(unit.frame_for(Mob.DEATH,9.0)==17)
   assert(unit.source_rect(Mob.DEATH,9.0).end.y<=3360.0)
   var old_hp: int=unit.hp
@@ -445,6 +596,17 @@ func run_smoke() -> void:
   for n in range(100):unit.update(.016,pos,true)
   assert(unit.frame_for(unit.clip,unit.time)==17)
  start_game();mode="game"
+ assert(aim_target()==0)
+ var old_foot: Vector2=project(targets[0].p)
+ look_delta(Vector2(0,100))
+ assert(pitch_target>0.0)
+ pitch=pitch_target
+ assert(project(targets[0].p).y<old_foot.y and aim_target()!=0)
+ pitch=0.0;pitch_target=0.0
+ gyro_swap=false;gyro_invert_pitch=false;gyro_invert_yaw=false;gyro_rate=Vector2.ZERO
+ apply_gyro_delta(Vector3(-1,-1,0),0.05)
+ assert(pitch_target>0.0 and yaw_target>0.0)
+ pitch_target=0.0;yaw_target=0.0;gyro_rate=Vector2.ZERO
  fire();assert(ammo==11 and targets[0].hp==targets[0].max_hp-1)
- print("BLACK_SIGNAL_SMOKE_OK: walk run jump crouch prone stand fire; six mobs + 540 frames + attacks + death; pure 2D")
+ print("BLACK_SIGNAL_SMOKE_OK: six three-view mobs; vertical aim + gyro axis integration + hit test; pure 2D")
  get_tree().quit()

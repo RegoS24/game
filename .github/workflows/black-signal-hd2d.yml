@@ -111,4 +111,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-hd2d-v0.7.0-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.0 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 292 restored and motion-interpolated 384x512 raster frames, reversible stances, six distinct enemies, 540 enemy frames and combat AI. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-hd2d-v0.7.1-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.1 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 292 restored and motion-interpolated 384x512 raster frames, reversible stances, six enemies with front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
