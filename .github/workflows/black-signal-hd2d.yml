@@ -53,6 +53,7 @@ jobs:
           curl -fL --retry 3 -o /tmp/realesr-animevideov3.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth
           RIN_SR_WEIGHTS=/tmp/realesr-animevideov3.pth python black-signal-hd2d/prepare_atlases.py
           python black-signal-hd2d/prepare_mobs.py
+          python black-signal-hd2d/prepare_locomotion.py
       - name: Import project and parse scripts
         run: |
           set -o pipefail
@@ -112,4 +113,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-hd2d-v0.7.2-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.2 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 292 restored and motion-interpolated 384x512 raster frames, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-hd2d-v0.7.3-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.3 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 372 motion-interpolated 384x512 Rin frames with rebuilt running, crouch walking and prone crawling, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease

@@ -3,12 +3,13 @@ extends RefCounted
 const SHEETS = {
  "idle":preload("res://assets/idle_smooth.webp"),"walk":preload("res://assets/walk_smooth.webp"),
  "run":preload("res://assets/run_smooth.webp"),"jump":preload("res://assets/jump_smooth.webp"),
- "crouch":preload("res://assets/crouch_smooth.webp"),"prone":preload("res://assets/prone_smooth.webp")
+ "crouch":preload("res://assets/crouch_smooth.webp"),"prone":preload("res://assets/prone_smooth.webp"),
+ "crouch_walk":preload("res://assets/crouch_walk_smooth.webp"),"crawl":preload("res://assets/crawl_smooth.webp")
 }
-const COUNT = {"idle":48,"walk":60,"run":48,"jump":48,"crouch":40,"prone":48}
+const COUNT = {"idle":48,"walk":60,"run":48,"jump":48,"crouch":40,"prone":48,"crouch_walk":40,"crawl":40}
 const TILE_W: float = 384.0
 const TILE_H: float = 512.0
-const DURATION = {"idle":1.8,"walk":1.0,"run":0.72,"jump":0.78,"crouch":0.48,"prone":0.66}
+const DURATION = {"idle":1.8,"walk":1.0,"run":0.70,"jump":0.78,"crouch":0.48,"prone":0.66,"crouch_walk":1.12,"crawl":1.50}
 var clip: String = "idle"
 var frame: float = 0.0
 var previous_clip: String = "idle"
@@ -24,7 +25,7 @@ var jump_requested: bool = false
 var locomotion: bool = false
 var blend_time: float = 0.12
 func is_loop(name: String) -> bool:
- return name=="idle" or name=="walk" or name=="run"
+ return name=="idle" or name=="walk" or name=="run" or name=="crouch_walk" or name=="crawl"
 func set_clip(name: String, start: float = 0.0, keep_phase: bool = false) -> void:
  if name==clip:
   if not keep_phase: frame=start
@@ -52,15 +53,15 @@ func request_prone() -> void:
 func request_jump() -> void:
  if stance=="stand" and target_stance=="stand" and transition.is_empty() and not jumping: jump_requested=true
 func speed_factor() -> float:
- if not transition.is_empty(): return 0.18
+ if not transition.is_empty(): return 0.06
  if stance=="prone": return 0.24
  if stance=="crouch": return 0.50
  return 1.0
 func state_label() -> String:
  if jumping: return "ПРЫЖОК"
  if not transition.is_empty(): return "СМЕНА СТОЙКИ"
- if stance=="prone": return "ЛЁЖА"
- if stance=="crouch": return "ПРИСЕД"
+ if stance=="prone": return "ПОЛЗАНИЕ" if clip=="crawl" else "ЛЁЖА"
+ if stance=="crouch": return "ХОДЬБА В ПРИСЕДЕ" if clip=="crouch_walk" else "ПРИСЕД"
  if locomotion: return "БЕГ" if running else "ХОДЬБА"
  return "ПОКОЙ"
 func tick(dt: float, movement: float, sprint: bool) -> void:
@@ -99,17 +100,23 @@ func tick(dt: float, movement: float, sprint: bool) -> void:
   return
  if jump_requested:
   jump_requested=false;jumping=true;set_clip("jump",0.0);return
+ locomotion=movement>0.12 if not locomotion else moving>0.055
  if stance!="stand":
-  if clip!=stance: set_clip(stance,float(COUNT[stance])-1)
-  frame=float(COUNT[stance])-1
+  var low_clip: String="crawl" if stance=="prone" else "crouch_walk"
+  if not locomotion:
+   if clip!=stance:set_clip(stance,float(COUNT[stance])-1)
+   frame=float(COUNT[stance])-1
+   return
+  if clip!=low_clip:set_clip(low_clip,0.0)
+  var low_rate: float=float(COUNT[clip])/float(DURATION[clip])*clampf(moving,0.20,1.0)
+  frame=fposmod(frame+dt*low_rate,float(COUNT[clip]))
   return
- locomotion=movement>0.15 if not locomotion else movement>0.045
  var desired: String="idle" if not locomotion else ("run" if sprint else "walk")
  if desired!=clip:
   var preserve: bool=(clip=="walk" or clip=="run") and (desired=="walk" or desired=="run")
   set_clip(desired,0.0,preserve)
  var rate: float=float(COUNT[clip])/float(DURATION[clip])
- if locomotion: rate*=lerpf(0.72,1.0,clampf(moving,0.0,1.0))
+ if locomotion: rate*=clampf(moving,0.20,1.0)
  frame=fposmod(frame+dt*rate,float(COUNT[clip]))
 func paint(canvas: CanvasItem, at: Vector2, scale_factor: float, extra: Vector2=Vector2.ZERO) -> void:
  var dst:=Rect2(at-Vector2(96,224)*scale_factor+extra-Vector2(0,jump_lift()),Vector2(192,256)*scale_factor)
