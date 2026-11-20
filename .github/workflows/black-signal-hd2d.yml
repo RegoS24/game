@@ -87,11 +87,13 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_6
+          ram-size: 4096
+          heap-size: 512
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
           script: bash black-signal-hd2d/smoke-android.sh
       - name: Upload native screenshots
         if: always()
@@ -101,10 +103,11 @@ jobs:
           path: |
             dist/lobby.png
             dist/city.png
+            dist/failure.png
             dist/android.log
           if-no-files-found: ignore
       - name: Publish development build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-hd2d-v0.6.3-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.6.3 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 292 restored and motion-interpolated 384x512 raster frames, reversible stances and loop timing improvements. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-hd2d-v0.6.4-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.6.4 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 292 restored and motion-interpolated 384x512 raster frames, reversible stances and loop timing improvements. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
