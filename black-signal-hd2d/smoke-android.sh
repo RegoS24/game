@@ -7,6 +7,8 @@ adb shell input keyevent 82 || true
 adb shell settings put secure immersive_mode_confirmations confirmed
 adb shell settings put global show_first_crash_dialog 0
 adb shell settings put secure screensaver_enabled 0
+adb shell settings put global anr_show_background 0
+adb shell am force-stop com.android.launcher3 || true
 adb logcat -G 8M || true
 adb install --no-incremental -r dist/BLACK-SIGNAL-HD2D.apk
 adb shell am force-stop "$PKG"
@@ -33,8 +35,11 @@ adb exec-out screencap -p > dist/lobby.png
 read -r x y < <(python3 -c 'from PIL import Image; w,h=Image.open("dist/lobby.png").size; assert w>h,(w,h);s=min(w/1280,h/720);print(round((w-1280*s)/2+1100*s),round((h-720*s)/2+586*s))')
 echo "Touch START at $x $y"
 adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' || true
-for attempt in $(seq 1 5); do
+for attempt in $(seq 1 8); do
  if grep -q BLACK_SIGNAL_CITY_READY dist/android.log; then break; fi
+ adb shell am force-stop com.android.launcher3 || true
+ adb shell am start -W -n "$PKG/com.godot.game.GodotApp" >/dev/null || true
+ sleep 2
  adb shell input tap "$x" "$y"
  sleep 4
 done

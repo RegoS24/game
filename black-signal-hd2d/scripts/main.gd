@@ -1,6 +1,7 @@
 extends Node2D
 ## Pure CanvasItem projection: all locations are Vector2, all art is 2D.
 const Animator = preload("res://scripts/rin_animator.gd")
+const RIN_HEIGHT: float=1.68
 const Mob = preload("res://scripts/enemy.gd")
 const W: float = 1280.0
 const H: float = 720.0
@@ -89,7 +90,7 @@ func build_world() -> void:
     world.append({"p":Vector2(float(x)*5.2,zz+9.0),"kind":"crate","height":1.3,"side":x,"id":z})
  # Six separate encounters spaced along the avenue. All six use original illustrated atlases.
  for i in range(ENEMY_COUNT):
-  var lane: float=0.0 if i==0 else (-3.5 if i%2==0 else 3.5)
+  var lane: float=-0.58 if i==0 else (-3.5 if i%2==0 else 3.5)
   targets.append(Mob.new(i,Vector2(lane,3.5+float(i)*22.0)))
 
 func start_game() -> void:
@@ -257,8 +258,9 @@ func update_enemies(dt: float) -> void:
    if not targets[j].living():continue
    var diff: Vector2=targets[i].p-targets[j].p
    var distance: float=diff.length()
-   if distance<0.9 and distance>0.01:
-    var push: Vector2=diff.normalized()*(0.9-distance)*minf(0.5,dt*4.0)
+   var required: float=targets[i].radius()+targets[j].radius()+0.12
+   if distance<required and distance>0.01:
+    var push: Vector2=diff.normalized()*(required-distance)*minf(0.5,dt*4.0)
     targets[i].p+=push;targets[j].p-=push
 
 func announce(message: String) -> void:
@@ -290,10 +292,9 @@ func aim_target() -> int:
   if dep<=NEAR or dep>=nearest:continue
   var foot: Vector2=project(mob.p)
   var screen_h: float=mob.height()*F/dep
-  var radius: float=(0.86 if mob.kind==2 or mob.kind>=4 else 0.62)*F/dep+5.0
-  var bottom: float=foot.y+4.0
-  if mob.kind==5:bottom=foot.y-screen_h*.26
-  if absf(cross.x-foot.x)<=radius and cross.y>=foot.y-screen_h*1.10-4.0 and cross.y<=bottom:
+  var radius: float=mob.width()*0.5*F/dep+5.0
+  var bottom: float=foot.y-mob.altitude()*F/dep+4.0
+  if absf(cross.x-foot.x)<=radius and cross.y>=bottom-screen_h-8.0 and cross.y<=bottom:
    nearest=dep;best=i
  return best
 
@@ -475,17 +476,18 @@ func draw_prop(o: Dictionary, dep: float) -> void:
 
 func draw_enemy(mob: Mob,foot: Vector2,scale_factor: float) -> void:
  var h: float=mob.height()*scale_factor
- if foot.x+h<0.0 or foot.x-h>W or foot.y+h<0.0 or foot.y-h>H:return
- var shadow: float=maxf(2.0,h*(0.33 if mob.kind>=4 else 0.22))
+ var top: float=foot.y-(mob.height()+mob.altitude())*scale_factor
+ if foot.x+h<0.0 or foot.x-h>W or foot.y<0.0 or top>H:return
+ var shadow: float=maxf(2.0,mob.radius()*scale_factor)
  draw_set_transform(foot,0,Vector2(1.0,0.26))
  draw_circle(Vector2.ZERO,shadow,Color(0.02,0.02,0.05,0.48))
  draw_set_transform(Vector2.ZERO)
- mob.paint(self,foot,h,camera-mob.p,right)
+ mob.paint(self,foot,scale_factor,camera-mob.p,right)
  if not mob.living():return
  if mob.attack_flash>0.0 and mob.kind!=0 and mob.kind!=4:
-  draw_line(foot-Vector2(0,h*0.53),project(pos,1.15),Color(1.0,0.35,0.30,mob.attack_flash*4.0),1.8,true)
+  draw_line(foot-Vector2(0,mob.altitude()*scale_factor+h*0.53),project(pos,1.15),Color(1.0,0.35,0.30,mob.attack_flash*4.0),1.8,true)
  var bar_w: float=clampf(h*0.65,20.0,90.0)
- var bar_p: Vector2=foot-Vector2(bar_w*0.5,h*1.18)
+ var bar_p: Vector2=Vector2(foot.x-bar_w*0.5,top-10.0)
  draw_rect(Rect2(bar_p,Vector2(bar_w,4)),Color("291b31"))
  draw_rect(Rect2(bar_p,Vector2(bar_w*float(mob.hp)/float(mob.max_hp),4)),PINK)
  if h>52.0:
@@ -503,7 +505,7 @@ func _draw() -> void:
   draw_texture_rect(LOADING,Rect2(0,0,W,H),false);return
  draw_city()
  var foot: Vector2=project(pos)
- var sc: float=(F/4.3)*1.95/164.0
+ var sc: float=(F/4.3)*RIN_HEIGHT/164.0
  var shadow_scale: float=1.0-anim.jump_lift()/150.0
  draw_set_transform(foot,0,Vector2(shadow_scale,.30*shadow_scale));draw_circle(Vector2.ZERO,31,Color(0.01,0.02,0.04,0.60*shadow_scale));draw_set_transform(Vector2.ZERO)
  var recoil := Vector2(-shot_flash*30.0,shot_flash*55.0)
@@ -573,15 +575,16 @@ func run_smoke() -> void:
  for i in range(ENEMY_COUNT):
   var unit: Mob=targets[i]
   assert(unit.kind==i and unit.max_hp>0 and unit.texture!=null)
-  assert(unit.texture.get_width()==1152 and unit.texture.get_height()==3360)
-  assert(unit.direction_texture!=null and unit.direction_texture.get_width()==1152 and unit.direction_texture.get_height()==2688)
+  assert(unit.texture.get_width()==1536 and unit.texture.get_height()==3584)
+  assert(unit.width()>0.0 and unit.height()>0.0)
   unit.heading=Vector2(0,-1)
   assert(unit.view_for(Vector2(0,-1))==Mob.FRONT)
   assert(unit.view_for(Vector2(1,0))==Mob.SIDE)
   assert(unit.view_for(Vector2(0,1))==Mob.BACK)
-  assert(unit.directional_rect(Mob.BACK,Mob.RUN,.5).end.y<=2688.0)
+  assert(unit.packed_rect(Mob.BACK,Mob.RUN,.5).end.y<=3584.0)
+  assert(unit.packed_rect(Mob.FRONT,5,.2).end.y<=3584.0)
   assert(unit.frame_for(Mob.DEATH,9.0)==17)
-  assert(unit.source_rect(Mob.DEATH,9.0).end.y<=3360.0)
+  assert(unit.packed_rect(Mob.FRONT,Mob.DEATH,9.0).end.y<=3584.0)
   var old_hp: int=unit.hp
   assert(unit.take_hit()==false and unit.hp==old_hp-1)
   unit.set_clip(Mob.IDLE)
@@ -596,17 +599,24 @@ func run_smoke() -> void:
   for n in range(100):unit.update(.016,pos,true)
   assert(unit.frame_for(unit.clip,unit.time)==17)
  start_game();mode="game"
+ assert(targets[2].height()>targets[1].height() and targets[4].height()<RIN_HEIGHT and targets[5].altitude()>1.0)
+ # Align held aim with the actual center of the first unit, not a stale fixed height.
+ yaw=0.0;yaw_target=0.0;update_camera()
+ var first: Mob=targets[0]
+ var dep: float=local_of(first.p).y
+ pitch=atan((HORIZON+(3.1-first.height()*0.5)*F/dep-reticle().y)/F);pitch_target=pitch
  assert(aim_target()==0)
+ var baseline_pitch: float=pitch
  var old_foot: Vector2=project(targets[0].p)
  look_delta(Vector2(0,100))
- assert(pitch_target>0.0)
+ assert(pitch_target>baseline_pitch)
  pitch=pitch_target
  assert(project(targets[0].p).y<old_foot.y and aim_target()!=0)
- pitch=0.0;pitch_target=0.0
+ pitch=baseline_pitch;pitch_target=0.0
  gyro_swap=false;gyro_invert_pitch=false;gyro_invert_yaw=false;gyro_rate=Vector2.ZERO
  apply_gyro_delta(Vector3(-1,-1,0),0.05)
  assert(pitch_target>0.0 and yaw_target>0.0)
  pitch_target=0.0;yaw_target=0.0;gyro_rate=Vector2.ZERO
  fire();assert(ammo==11 and targets[0].hp==targets[0].max_hp-1)
- print("BLACK_SIGNAL_SMOKE_OK: six three-view mobs; vertical aim + gyro axis integration + hit test; pure 2D")
+ print("BLACK_SIGNAL_SMOKE_OK: six scaled front/side/rear mobs + front hit reaction + vertical aim and gyro; pure 2D")
  get_tree().quit()
