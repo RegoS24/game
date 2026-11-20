@@ -46,6 +46,10 @@ jobs:
           printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\nexport/android/debug_keystore = "%s"\n' "$ANDROID_HOME" "$JAVA_HOME" "$HOME/.android/debug.keystore" > "$HOME/.config/godot/editor_settings-4.5.tres"
           cp "$HOME/.config/godot/editor_settings-4.5.tres" "$HOME/.config/godot/editor_settings-4.tres"
           godot --version
+      - name: Rasterize app icon and startup image
+        run: |
+          python -m pip install cairosvg
+          python -c 'import cairosvg; cairosvg.svg2png(url="black-signal-godot-3d/icon.svg",write_to="black-signal-godot-3d/icon.png",output_width=512,output_height=512)'
       - name: Import project and parse scripts
         run: |
           set -o pipefail
