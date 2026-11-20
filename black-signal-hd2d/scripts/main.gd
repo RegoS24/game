@@ -69,7 +69,7 @@ const JOY := Vector2(115,590)
 const GYRO_RECTS: Dictionary={"gyro":Rect2(395,60,126,42),"sensitivity":Rect2(530,60,113,42),"center":Rect2(652,60,114,42),"invert":Rect2(775,60,98,42),"axis":Rect2(882,60,101,42),"yaw_sign":Rect2(992,60,101,42)}
 
 func _ready() -> void:
- Engine.max_fps = 60
+ Engine.max_fps = 90
  texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
  load_aim_settings()
  # Avoid allocating all enemy textures while the lobby is being loaded.
@@ -560,8 +560,29 @@ func run_smoke() -> void:
  anim.request_jump();anim.tick(.03,1.0,true);assert(anim.jumping)
  for i in range(100): anim.tick(.016,0,false)
  assert(not anim.jumping and anim.clip=="idle")
- assert(anim.index_for("walk",59.9)==0)
- assert(anim.index_for("jump",100)==47)
+ assert(anim.index_for("walk",89.9)==0)
+ assert(anim.index_for("jump",100)==71)
+ # Check each clip's nominal sampling rate and packed-page layout.
+ assert(Engine.max_fps==90 and Animator.ANIMATION_FPS==90.0)
+ var frame_total: int=0
+ for name in Animator.COUNT:
+  var count: int=int(Animator.COUNT[name])
+  frame_total+=count
+  var intervals: int=count if anim.is_loop(name) else count-1
+  assert(absf(float(intervals)/float(Animator.DURATION[name])-90.0)<0.001)
+  var layout: Array=Animator.LAYOUT[name]
+  var pages: Array=Animator.SHEETS[name]
+  assert(pages.size()==ceili(float(count)/float(layout[5])))
+  for page in pages:
+   assert(page.get_width()<=4096 and page.get_height()<=4096)
+ assert(frame_total==742)
+ var cadence=Animator.new()
+ cadence.set_clip("run",0.0)
+ cadence.moving=1.0
+ for i in range(72):
+  cadence.advance_gait(1.0/90.0)
+  assert(cadence.frame_index()==(i+1)%72)
+ print("RIN90_CADENCE_OK: eight clips at 90 samples per second")
  # Verify full two-leg gait cycles are traversed, including both opposite peaks.
  for gait in ["run","crouch_walk","crawl"]:
   var tester=Animator.new()

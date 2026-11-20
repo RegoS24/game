@@ -12,7 +12,7 @@ from torch import nn
 from torch.nn import functional as F
 
 ROOT=Path(__file__).parent/"assets"
-COUNTS={"idle":48,"walk":60,"run":48,"jump":48,"crouch":40,"prone":48}
+COUNTS={"idle":162,"walk":90,"jump":72,"crouch":45,"prone":61}
 LOOPS={"idle","walk","run"}
 TILE_W,TILE_H=384,512
 S=256

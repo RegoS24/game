@@ -55,6 +55,8 @@ jobs:
           python black-signal-hd2d/prepare_mobs.py
           python black-signal-hd2d/prepare_locomotion.py | tee /tmp/rin_gait.log
           for gait in run crouch_walk crawl; do grep -q "RIN_ALTERNATION_OK $gait" /tmp/rin_gait.log; done
+          python black-signal-hd2d/pack_rin_90fps.py | tee /tmp/rin90.log
+          grep -q "RIN90_READY 742" /tmp/rin90.log
       - name: Import project and parse scripts
         run: |
           set -o pipefail
@@ -65,6 +67,7 @@ jobs:
           set -o pipefail
           timeout 120 godot --headless --path black-signal-hd2d -- --smoke 2>&1 | tee smoke.log
           grep -q BLACK_SIGNAL_SMOKE_OK smoke.log
+          grep -q RIN90_CADENCE_OK smoke.log
           ! grep -E 'SCRIPT ERROR|Parse Error|Invalid polygon data' smoke.log
       - name: Export native Android APK
         run: |
@@ -114,4 +117,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-hd2d-v0.7.4-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.4 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 372 motion-interpolated 384x512 Rin frames with rebuilt running, crouch walking and prone crawling, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-hd2d-v0.7.5-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.5 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 742 motion-interpolated Rin frames sampled at 90 Hz, packed into bounded transparent-trimmed pages with rebuilt running, crouch walking and prone crawling, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease

@@ -1,15 +1,13 @@
 extends RefCounted
 ## A time-driven HD sprite animator: no skeletal or 3D objects.
-const SHEETS = {
- "idle":preload("res://assets/idle_smooth.webp"),"walk":preload("res://assets/walk_smooth.webp"),
- "run":preload("res://assets/run_smooth.webp"),"jump":preload("res://assets/jump_smooth.webp"),
- "crouch":preload("res://assets/crouch_smooth.webp"),"prone":preload("res://assets/prone_smooth.webp"),
- "crouch_walk":preload("res://assets/crouch_walk_smooth.webp"),"crawl":preload("res://assets/crawl_smooth.webp")
-}
-const COUNT = {"idle":48,"walk":60,"run":48,"jump":48,"crouch":40,"prone":48,"crouch_walk":40,"crawl":40}
+const PackedFrames = preload("res://scripts/rin_frames_generated.gd")
+const SHEETS = PackedFrames.SHEETS
+const LAYOUT = PackedFrames.LAYOUT
+const ANIMATION_FPS: float = 90.0
+const COUNT = {"idle":162,"walk":90,"run":72,"jump":72,"crouch":45,"prone":61,"crouch_walk":104,"crawl":136}
 const TILE_W: float = 384.0
 const TILE_H: float = 512.0
-const DURATION = {"idle":1.8,"walk":1.0,"run":0.80,"jump":0.78,"crouch":0.48,"prone":0.66,"crouch_walk":1.12,"crawl":1.50}
+const DURATION = {"idle":162.0/90.0,"walk":90.0/90.0,"run":72.0/90.0,"jump":71.0/90.0,"crouch":44.0/90.0,"prone":60.0/90.0,"crouch_walk":104.0/90.0,"crawl":136.0/90.0}
 var clip: String = "idle"
 var frame: float = 0.0
 var previous_clip: String = "idle"
@@ -127,5 +125,16 @@ func paint(canvas: CanvasItem, at: Vector2, scale_factor: float, extra: Vector2=
  if a<1.0: draw_frame(canvas,previous_clip,index_for(previous_clip,previous_frame),dst,1.0-a)
  draw_frame(canvas,clip,frame_index(),dst,a)
 func draw_frame(canvas: CanvasItem,name: String,number: int,dst: Rect2,alpha: float) -> void:
- var src:=Rect2(Vector2(float(number%8)*TILE_W,floorf(float(number)/8.0)*TILE_H),Vector2(TILE_W,TILE_H))
- canvas.draw_texture_rect_region(SHEETS[name],dst,src,Color(1,1,1,alpha))
+ # Packed pages retain the original 384×512 coordinate system and feet anchor.
+ var layout: Array=LAYOUT[name]
+ var page_size: int=int(layout[5])
+ var page: int=floori(float(number)/float(page_size))
+ var local_index: int=number%page_size
+ var cols: int=int(layout[4])
+ var tile:=Vector2(float(layout[2]),float(layout[3]))
+ var offset:=Vector2(float(layout[0]),float(layout[1]))
+ var src:=Rect2(Vector2(float(local_index%cols),float(floori(float(local_index)/float(cols))))*tile,tile)
+ var ratio:=dst.size/Vector2(TILE_W,TILE_H)
+ var region:=Rect2(dst.position+offset*ratio,tile*ratio)
+ var sheet: Texture2D=SHEETS[name][page]
+ canvas.draw_texture_rect_region(sheet,region,src,Color(1,1,1,alpha))

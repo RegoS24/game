@@ -9,7 +9,7 @@ from PIL import ImageDraw
 ROOT=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).parent/'assets'
 W,H=384,512
 cv2.setNumThreads(2)
-rows=[('run',0,326,328,48),('crouch_walk',326,590,230,40),('crawl',590,768,150,40)]
+rows=[('run',0,326,328,72),('crouch_walk',326,590,230,104),('crawl',590,768,150,136)]
 sheet=np.array(Image.open(ROOT/'rin_locomotion_source.webp').convert('RGB'))
 assert sheet.shape==(768,2048,3),sheet.shape
 Y,X=np.mgrid[:H,:W].astype(np.float32); GRID=np.stack((X,Y),-1)
