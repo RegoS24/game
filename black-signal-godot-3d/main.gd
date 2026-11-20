@@ -345,8 +345,7 @@ func show_lobby():
 	btn("ТРЕНИРОВКА",Vector4(.024,.61,.222,.685),start_game)
 	panel_at(Vector4(.76,.19,.98,.405))
 	text_at("ОПЕРАЦИЯ 07",Vector4(.776,.205,.965,.25),17,"f8bfdc")
-	text_at("ТЕНИ
-СЕКТОРА 07",Vector4(.776,.255,.965,.345),24,"f6eff6")
+	text_at("ТЕНИ\nСЕКТОРА 07",Vector4(.776,.255,.965,.345),24,"f6eff6")
 	text_at("СЮЖЕТ  /  PvE",Vector4(.776,.35,.965,.394),14,"9ddbea")
 	panel_at(Vector4(.74,.64,.98,.77))
 	text_at("НОКС-СИТИ",Vector4(.758,.65,.96,.695),20,"c0d7e8")
@@ -550,26 +549,26 @@ func shoot():
 	mags[weapon]-=1
 	cooldown=GUNS[weapon]["rate"]
 	recoil=1
-	var from=player.position+Vector3(0,1.3,0)
+	var origin=player.position+Vector3(0,1.3,0)
 	var dir=-Basis(Vector3.UP,yaw).z
 	var best=null
 	var score=0.89 if auto_aim else .994
 	for e in enemies:
-		var diff=e.node.position+Vector3(0,1.1,0)-from
+		var diff=e.node.position+Vector3(0,1.1,0)-origin
 		var dot=dir.dot(diff.normalized())
 		if diff.length()<34 and dot>score:
-			var query=PhysicsRayQueryParameters3D.create(from,from+diff,1)
+			var query=PhysicsRayQueryParameters3D.create(origin,origin+diff,1)
 			if get_world_3d().direct_space_state.intersect_ray(query).is_empty():
 				best=e
 				score=dot
-	var dest=from+dir*45
+	var dest=origin+dir*45
 	if best!=null:
 		dest=best.node.position+Vector3(0,1.1,0)
 		best.hp-=GUNS[weapon]["damage"]
 		if best.hp<=0:
 			kill_enemy(best)
-	var mid=(from+dest)/2
-	var tracer=city.box(self,mid,Vector3(.025,.025,from.distance_to(dest)),city.material("ffd787",2))
+	var mid=(origin+dest)/2
+	var tracer=city.box(self,mid,Vector3(.025,.025,origin.distance_to(dest)),city.material("ffd787",2))
 	tracer.look_at(dest,Vector3.UP)
 	projectiles.append({"node":tracer,"time":.07})
 	update_hud()

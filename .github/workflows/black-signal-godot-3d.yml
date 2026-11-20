@@ -25,6 +25,11 @@ jobs:
           log-accepted-android-sdk-licenses: 'false'
       - name: Android SDK
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.1'
+      - name: Restore development signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: black-signal-native3d-debug-signing-v1
       - name: Godot engine and Android export templates
         shell: bash
         run: |
@@ -37,11 +42,15 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates"
           mv /tmp/godot-templates/templates "$HOME/.local/share/godot/export_templates/4.5.1.stable"
           mkdir -p "$HOME/.config/godot" "$HOME/.android"
-          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          test -f "$HOME/.android/debug.keystore" || keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\nexport/android/debug_keystore = "%s"\n' "$ANDROID_HOME" "$JAVA_HOME" "$HOME/.android/debug.keystore" > "$HOME/.config/godot/editor_settings-4.5.tres"
+          cp "$HOME/.config/godot/editor_settings-4.5.tres" "$HOME/.config/godot/editor_settings-4.tres"
           godot --version
       - name: Import project and parse scripts
-        run: godot --headless --path black-signal-godot-3d --editor --import --quit 2>&1 | tee import.log; ! grep -E 'SCRIPT ERROR|Parse Error|Shader compilation failed' import.log
+        run: |
+          set -o pipefail
+          godot --headless --path black-signal-godot-3d --editor --import --quit 2>&1 | tee import.log
+          ! grep -E 'SCRIPT ERROR|Parse Error|Shader compilation failed' import.log
       - name: Native 3D smoke test
         run: |
           set -o pipefail
@@ -51,6 +60,9 @@ jobs:
       - name: Export native Android APK
         run: |
           mkdir -p dist
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
           godot --headless --path black-signal-godot-3d --export-debug Android "$PWD/dist/BLACK-SIGNAL-3D.apk"
           test -s dist/BLACK-SIGNAL-3D.apk
           unzip -Z1 dist/BLACK-SIGNAL-3D.apk | grep -E 'lib/arm64-v8a/libgodot_android.so'
@@ -60,8 +72,33 @@ jobs:
         with:
           name: BLACK-SIGNAL-3D-APK
           path: dist/BLACK-SIGNAL-3D.apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Native Android launch check
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash black-signal-godot-3d/smoke-android.sh
+      - name: Upload native screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NATIVE-ANDROID-TEST
+          path: |
+            dist/lobby.png
+            dist/city.png
+            dist/android.log
+          if-no-files-found: ignore
       - name: Publish development build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-3d-v0.6-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-3D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL 3D — v0.6 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 3D development build. Headless smoke test passed. Android device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-3d-v0.6-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-3D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL 3D — v0.6 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 3D development build. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
