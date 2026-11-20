@@ -35,5 +35,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="black-signal-rin-v0.2-${GITHUB_RUN_NUMBER}"
-          gh release create "$tag" out/BLACK-SIGNAL-RIN.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL RIN — v0.2 ($GITHUB_RUN_NUMBER)" --notes 'Android debug-signed build. Offline, landscape.' --prerelease
+          tag="black-signal-rin-v0.3-${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" out/BLACK-SIGNAL-RIN.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL RIN — v0.3 ($GITHUB_RUN_NUMBER)" --notes 'Android debug-signed build. Offline, landscape.' --prerelease
