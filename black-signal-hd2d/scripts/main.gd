@@ -81,6 +81,7 @@ func start_game() -> void:
  player_hp=100;player_hurt=0.0;encounter_clear=false;battle_time=0.0
  sprint_latch = false; fire_id = -1; shot_cool = 0.0; shot_flash = 0.0
  build_world(); update_camera()
+ print("BLACK_SIGNAL_MOBS_READY: ",targets.size())
 
 func update_camera() -> void:
  forward = Vector2(sin(yaw),cos(yaw))
@@ -120,7 +121,7 @@ func _process(dt: float) -> void:
     var n: int = mini(12-ammo,reserve); ammo += n; reserve -= n
   if shoot_hold: fire()
   # A short arrival grace period lets the player orient before the first attack.
-  if battle_time>2.0 and not encounter_clear:
+  if battle_time>2.0:
    update_enemies(dt)
   ui_timer = maxf(0,ui_timer-dt)
  queue_redraw()
@@ -363,7 +364,7 @@ func _draw() -> void:
   panel(Rect2(0,0,W,H),Color(0.015,0.02,0.06,0.25),Color.TRANSPARENT)
   panel(Rect2(925,478,345,190));text_at(Vector2(949,510),"СЕКТОР 07 • ТРЕНИРОВКА",20,GOLD);text_at(Vector2(950,534),"Одиночный / камера TPP • 2D",15,CYAN)
   button(Rect2(945,540,310,92),"НАЧАТЬ",true)
-  panel(Rect2(18,610,410,74));text_at(Vector2(32,637),"BLACK SIGNAL / HD2D",20,GOLD);text_at(Vector2(32,662),"Шесть типов противников • predemo",15)
+  panel(Rect2(18,610,410,74));text_at(Vector2(32,637),"BLACK SIGNAL / HD2D",20,GOLD);text_at(Vector2(32,662),"Шесть типов противников • тест",15)
   return
  if mode=="loading":
   draw_texture_rect(LOADING,Rect2(0,0,W,H),false);return

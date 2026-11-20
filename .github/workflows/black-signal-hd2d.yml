@@ -24,7 +24,7 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: 'false'
       - name: Android SDK
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.1'
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.1' 'emulator'
       - name: Restore development signing key
         uses: actions/cache@v4
         with:
@@ -88,12 +88,13 @@ jobs:
         with:
           api-level: 34
           target: default
+          cores: 4
           arch: x86_64
           profile: pixel_6
           ram-size: 4096
           heap-size: 512
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          emulator-options: -no-window -gpu lavapipe -noaudio -no-boot-anim -no-snapshot -camera-back none
           script: bash black-signal-hd2d/smoke-android.sh
       - name: Upload native screenshots
         if: always()

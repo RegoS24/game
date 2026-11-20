@@ -39,6 +39,7 @@ for attempt in $(seq 1 5); do
  sleep 4
 done
 wait_marker BLACK_SIGNAL_CITY_READY 45
+wait_marker "BLACK_SIGNAL_MOBS_READY: 6" 15
 adb shell pidof "$PKG"
 sleep 3
 adb exec-out screencap -p > dist/city.png
@@ -52,5 +53,5 @@ for name in ("lobby","city"):
  assert v.std()>10 and (v.max(2)>32).mean()>.25, (name,"blank image")
  print(name,"image variance",float(v.std()))
 PY
-if grep -E 'SCRIPT ERROR|FATAL EXCEPTION' dist/android.log; then exit 1; fi
+if grep -E 'SCRIPT ERROR|FATAL EXCEPTION|CanvasShaderGLES3: Program linking failed' dist/android.log; then exit 1; fi
 echo "PASS native Godot HD2D lobby and city"
