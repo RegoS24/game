@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
  private boolean smoke=false, fallback=false;
  @Override public void onCreate(Bundle saved) {
   super.onCreate(saved);
-  smoke="1".equals(getIntent().getStringExtra("smoke"));
+  smoke="1".equals(getIntent().getStringExtra("smoke")) && (Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk_gphone") || Build.HARDWARE.contains("ranchu"));
   getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|WindowManager.LayoutParams.FLAG_FULLSCREEN);
   if(Build.VERSION.SDK_INT>=28){WindowManager.LayoutParams lp=getWindow().getAttributes();lp.layoutInDisplayCutoutMode=WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;getWindow().setAttributes(lp);}
   try {
@@ -61,10 +61,10 @@ public class MainActivity extends Activity {
  }
  private void checkReady(WebView view){
   if(game!=view||isFinishing())return;
-  view.evaluateJavascript("(typeof start==='function' && typeof render==='function' && document.getElementById('new')!==null && document.readyState==='complete')", value->{
+  view.evaluateJavascript("(typeof start==='function' && typeof render==='function' && typeof tac!=='undefined' && typeof heroes!=='undefined' && document.getElementById('new')!==null && document.readyState==='complete')", value->{
    if(!"true".equals(value)){Log.e(TAG,"JS_START_ERROR "+value);showFailure("Игровой код не запустился. Обнови Android System WebView. Если ошибка повторяется, сообщи версию Android.");return;}
    Log.i(TAG,"GAME_READY");
-   if(smoke)view.evaluateJavascript("(function(){try{start(false);var b=document.querySelector('#dialogChoices button');if(b)b.click();requestAnimationFrame(function(){try{render(performance.now());console.log(game && !paused && S.slots && S.hero ? 'BS_SMOKE_OK' : 'BS_SMOKE_STATE_FAIL');}catch(e){console.error('BS_SMOKE_RENDER '+e.message);}});return true}catch(e){console.error('BS_SMOKE_INIT '+e.message);return false}})()",null);
+   if(smoke)view.evaluateJavascript("(function(){try{start(!!load());var b=document.querySelector('#dialogChoices button');if(b)b.click();requestAnimationFrame(function(){try{render(performance.now());console.log(game && !paused && S.slots && S.hero ? 'BS_SMOKE_OK' : 'BS_SMOKE_STATE_FAIL');}catch(e){console.error('BS_SMOKE_RENDER '+e.message);}});return true}catch(e){console.error('BS_SMOKE_INIT '+e.message);return false}})()",null);
   });
  }
  private void showFailure(String reason){
