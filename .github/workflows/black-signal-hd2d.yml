@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -49,7 +49,9 @@ jobs:
       - name: Generate and validate animation atlases
         run: |
           python -m pip install numpy pillow opencv-python-headless
-          python black-signal-hd2d/prepare_atlases.py
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0
+          curl -fL --retry 3 -o /tmp/realesr-animevideov3.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth
+          RIN_SR_WEIGHTS=/tmp/realesr-animevideov3.pth python black-signal-hd2d/prepare_atlases.py
       - name: Import project and parse scripts
         run: |
           set -o pipefail
@@ -105,4 +107,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-hd2d-v0.6.2-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.6.2 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 216 processed raster frames and reversible stances. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-hd2d-v0.6.3-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.6.3 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 292 restored and motion-interpolated 384x512 raster frames, reversible stances and loop timing improvements. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease

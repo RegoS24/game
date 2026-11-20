@@ -5,7 +5,9 @@ const SHEETS = {
  "run":preload("res://assets/run_smooth.webp"),"jump":preload("res://assets/jump_smooth.webp"),
  "crouch":preload("res://assets/crouch_smooth.webp"),"prone":preload("res://assets/prone_smooth.webp")
 }
-const COUNT = {"idle":32,"walk":40,"run":40,"jump":36,"crouch":32,"prone":36}
+const COUNT = {"idle":48,"walk":60,"run":48,"jump":48,"crouch":40,"prone":48}
+const TILE_W: float = 384.0
+const TILE_H: float = 512.0
 const DURATION = {"idle":1.8,"walk":1.0,"run":0.72,"jump":0.78,"crouch":0.48,"prone":0.66}
 var clip: String = "idle"
 var frame: float = 0.0
@@ -33,9 +35,16 @@ func set_clip(name: String, start: float = 0.0, keep_phase: bool = false) -> voi
  clip=name
  frame=phase*float(COUNT[name]) if keep_phase else start
  mix=0.0
- blend_time=0.14 if is_loop(previous_clip) and is_loop(clip) else 0.085
+ blend_time=0.065 if is_loop(previous_clip) and is_loop(clip) else 0.045
 func frame_index() -> int:
- return clampi(int(floor(frame+0.5)),0,int(COUNT[clip])-1)
+ return index_for(clip,frame)
+func index_for(name: String, at_frame: float) -> int:
+ var n: int=int(COUNT[name])
+ return posmod(int(floor(at_frame+0.5)),n) if is_loop(name) else clampi(int(floor(at_frame+0.5)),0,n-1)
+func jump_lift() -> float:
+ if not jumping: return 0.0
+ var t: float=clampf(frame/float(COUNT["jump"]-1),0.0,1.0)
+ return 36.0*4.0*t*(1.0-t)
 func request_crouch() -> void:
  if not jumping: target_stance="stand" if target_stance=="crouch" else "crouch"
 func request_prone() -> void:
@@ -55,7 +64,7 @@ func state_label() -> String:
  if locomotion: return "БЕГ" if running else "ХОДЬБА"
  return "ПОКОЙ"
 func tick(dt: float, movement: float, sprint: bool) -> void:
- dt=clampf(dt,0.0,0.05)
+ dt=clampf(dt,0.0,0.20)
  moving=lerpf(moving,movement,1.0-exp(-dt*14.0))
  running=sprint
  mix=minf(1.0,mix+dt/blend_time)
@@ -103,10 +112,10 @@ func tick(dt: float, movement: float, sprint: bool) -> void:
  if locomotion: rate*=lerpf(0.72,1.0,clampf(moving,0.0,1.0))
  frame=fposmod(frame+dt*rate,float(COUNT[clip]))
 func paint(canvas: CanvasItem, at: Vector2, scale_factor: float, extra: Vector2=Vector2.ZERO) -> void:
- var dst:=Rect2(at-Vector2(128,224)*scale_factor+extra,Vector2(256,256)*scale_factor)
+ var dst:=Rect2(at-Vector2(96,224)*scale_factor+extra-Vector2(0,jump_lift()),Vector2(192,256)*scale_factor)
  var a:float=mix*mix*(3.0-2.0*mix)
- if a<1.0: draw_frame(canvas,previous_clip,clampi(int(floor(previous_frame+0.5)),0,int(COUNT[previous_clip])-1),dst,1.0-a)
+ if a<1.0: draw_frame(canvas,previous_clip,index_for(previous_clip,previous_frame),dst,1.0-a)
  draw_frame(canvas,clip,frame_index(),dst,a)
 func draw_frame(canvas: CanvasItem,name: String,number: int,dst: Rect2,alpha: float) -> void:
- var src:=Rect2(Vector2(float(number%8)*256.0,floorf(float(number)/8.0)*256.0),Vector2(256,256))
+ var src:=Rect2(Vector2(float(number%8)*TILE_W,floorf(float(number)/8.0)*TILE_H),Vector2(TILE_W,TILE_H))
  canvas.draw_texture_rect_region(SHEETS[name],dst,src,Color(1,1,1,alpha))

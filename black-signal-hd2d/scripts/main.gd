@@ -44,6 +44,8 @@ var action_rects: Dictionary = {"fire":Rect2(1146,444,104,104),"jump":Rect2(1156
 const JOY := Vector2(115,590)
 
 func _ready() -> void:
+ Engine.max_fps = 60
+ texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
  build_world()
  if DisplayServer.get_name() != "headless" and OS.has_feature("mobile"):
   get_window().mode = Window.MODE_FULLSCREEN
@@ -88,6 +90,8 @@ func _process(dt: float) -> void:
   input_vector.x += float(Input.is_physical_key_pressed(KEY_D))-float(Input.is_physical_key_pressed(KEY_A))
   input_vector.y += float(Input.is_physical_key_pressed(KEY_W))-float(Input.is_physical_key_pressed(KEY_S))
   input_vector = input_vector.limit_length(1.0)
+  var strength: float=input_vector.length()
+  input_vector = Vector2.ZERO if strength<0.10 else input_vector.normalized()*clampf((strength-0.10)/0.90,0.0,1.0)
   var sprint: bool = sprint_latch or Input.is_physical_key_pressed(KEY_SHIFT)
   yaw = lerp_angle(yaw,yaw_target,1.0-exp(-dt*18.0))
   update_camera()
@@ -95,7 +99,8 @@ func _process(dt: float) -> void:
   motion = motion.lerp(goal,1.0-exp(-dt*(10.5 if goal.length()>motion.length() else 8.0)))
   pos += motion*dt
   pos.x = clampf(pos.x,-5.9,5.9); pos.y = clampf(pos.y,-65.0,215.0)
-  anim.tick(dt,minf(1.0,motion.length()/2.0),sprint and anim.stance=="stand")
+  var real_speed: float=motion.length()
+  anim.tick(dt,minf(1.0,real_speed/(5.8 if sprint else 3.1)),sprint and real_speed>3.5 and anim.stance=="stand")
   update_camera()
   shot_cool = maxf(0,shot_cool-dt); shot_flash = maxf(0,shot_flash-dt)
   if reload_time > 0.0:
@@ -238,7 +243,9 @@ func draw_city() -> void:
  for s in [-1,1]:
   var f: float=float(s)*5.9
   ground_poly([Vector2(f-.07,-120),Vector2(f+.07,-120),Vector2(f+.07,320),Vector2(f-.07,320)],Color("a7a7ac"))
- for i in range(-16,70):
+ var start_strip: int=maxi(-16,floori(pos.y/5.0)-16)
+ var end_strip: int=mini(70,ceili(pos.y/5.0)+33)
+ for i in range(start_strip,end_strip):
   var z: float=float(i)*5.0
   if local_of(Vector2(0,z)).y < -10: continue
   ground_poly([Vector2(-.08,z),Vector2(.08,z),Vector2(.08,z+2.6),Vector2(-.08,z+2.6)],Color("878c9a"))
@@ -257,7 +264,7 @@ func draw_city() -> void:
  drawlist.sort_custom(func(a,b): return a["depth"]>b["depth"])
  for entry in drawlist: draw_prop(entry["o"],entry["depth"])
  # Fine rain, subtle on-screen vignette lines.
- for i in range(74):
+ for i in range(46):
   var x: float=fposmod(float(i)*139.3+clock*75,W+60)-30
   var y: float=fposmod(float(i)*93.1+clock*360,H)
   draw_line(Vector2(x,y),Vector2(x-5,y+16),Color(0.68,0.76,0.86,0.13),0.9,true)
@@ -270,7 +277,8 @@ func draw_prop(o: Dictionary, dep: float) -> void:
   var r := Rect2(p-Vector2(w*.5,h),Vector2(w,h)); var accent: Color=PINK if int(o["id"])%3==0 else CYAN
   draw_rect(r,Color("1d2332")); draw_rect(r,Color("090e1d"),false,maxf(1.0,scale_factor*.13))
   draw_rect(Rect2(r.position,Vector2(w*.11,h)),Color("111727")); draw_rect(Rect2(r.position+Vector2(w*.82,0),Vector2(w*.18,h)),Color("121a26"))
-  var rows:int=mini(12,int(float(o["height"])/1.5))
+  if r.end.x<0.0 or r.position.x>W or r.end.y<0.0 or r.position.y>H: return
+  var rows:int=mini(12,int(float(o["height"])/1.5)) if scale_factor>9.0 else mini(4,int(float(o["height"])/3.0))
   for k in range(rows):
    for j in range(4):
     var q:=Rect2(r.position+Vector2(w*.18+float(j)*w*.15,h*.05+float(k)*h*.073),Vector2(w*.095,h*.042))
@@ -300,8 +308,9 @@ func _draw() -> void:
   draw_texture_rect(LOADING,Rect2(0,0,W,H),false);return
  draw_city()
  var foot: Vector2=project(pos)
- var sc: float=(F/4.3)*1.75/164.0
- draw_set_transform(foot,0,Vector2(1,.30));draw_circle(Vector2.ZERO,31,Color(0.01,0.02,0.04,0.60));draw_set_transform(Vector2.ZERO)
+ var sc: float=(F/4.3)*1.95/164.0
+ var shadow_scale: float=1.0-anim.jump_lift()/150.0
+ draw_set_transform(foot,0,Vector2(shadow_scale,.30*shadow_scale));draw_circle(Vector2.ZERO,31,Color(0.01,0.02,0.04,0.60*shadow_scale));draw_set_transform(Vector2.ZERO)
  var recoil := Vector2(-shot_flash*30.0,shot_flash*55.0)
  anim.paint(self,foot,sc,recoil)
  if shot_flash>0:
@@ -332,6 +341,9 @@ func run_smoke() -> void:
  anim.request_jump();anim.tick(.03,1.0,true);assert(anim.jumping)
  for i in range(100): anim.tick(.016,0,false)
  assert(not anim.jumping and anim.clip=="idle")
+ assert(anim.index_for("walk",59.9)==0)
+ assert(anim.index_for("jump",100)==47)
+ assert(anim.jump_lift()==0.0)
  anim.request_crouch()
  for i in range(100): anim.tick(.016,0,false)
  assert(anim.stance=="crouch" and anim.frame_index()==int(Animator.COUNT["crouch"])-1)
