@@ -1,6 +1,7 @@
 extends Node2D
 ## Pure CanvasItem projection: all locations are Vector2, all art is 2D.
 const Animator = preload("res://scripts/rin_animator.gd")
+const Mob = preload("res://scripts/enemy.gd")
 const W: float = 1280.0
 const H: float = 720.0
 const F: float = 540.0
@@ -36,7 +37,12 @@ var ammo: int = 12
 var reserve: int = 108
 var kills: int = 0
 var world: Array[Dictionary] = []
-var targets: Array[Dictionary] = []
+var targets: Array[Mob] = []
+var player_hp: int = 100
+var player_hurt: float = 0.0
+var encounter_clear: bool = false
+var battle_time: float = 0.0
+const ENEMY_COUNT: int = 6
 var clock: float = 0.0
 var ui_status: String = ""
 var ui_timer: float = 0.0
@@ -46,7 +52,7 @@ const JOY := Vector2(115,590)
 func _ready() -> void:
  Engine.max_fps = 60
  texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
- build_world()
+ # Avoid allocating all enemy textures while the lobby is being loaded.
  if DisplayServer.get_name() != "headless" and OS.has_feature("mobile"):
   get_window().mode = Window.MODE_FULLSCREEN
  print("BLACK_SIGNAL_LOBBY_READY")
@@ -62,14 +68,17 @@ func build_world() -> void:
    world.append({"p":Vector2(float(x)*6.8,zz+5.0),"kind":"light","height":5.2,"side":x,"id":z})
    if z%2 == 0:
     world.append({"p":Vector2(float(x)*5.2,zz+9.0),"kind":"crate","height":1.3,"side":x,"id":z})
- for i in range(5):
-  targets.append({"p":Vector2(-3.5+float(i%3)*3.5,11.0+float(i)*16.0),"hp":3})
+ # Six separate encounters spaced along the avenue. All six use original illustrated atlases.
+ for i in range(ENEMY_COUNT):
+  var lane: float=0.0 if i==0 else (-3.5 if i%2==0 else 3.5)
+  targets.append(Mob.new(i,Vector2(lane,3.5+float(i)*22.0)))
 
 func start_game() -> void:
  mode = "loading"; loading_time = 0.65
  pos = Vector2(0,-10); yaw = 0.0; yaw_target = 0.0; motion = Vector2.ZERO
  anim = Animator.new(); touch_joy = Vector2.ZERO; joy_id = -1; aim_id = -1
  kills = 0; ammo = 12; reserve = 108; reload_time = 0.0; shoot_hold = false
+ player_hp=100;player_hurt=0.0;encounter_clear=false;battle_time=0.0
  sprint_latch = false; fire_id = -1; shot_cool = 0.0; shot_flash = 0.0
  build_world(); update_camera()
 
@@ -86,6 +95,8 @@ func _process(dt: float) -> void:
    mode = "game"
    print("BLACK_SIGNAL_CITY_READY")
  if mode == "game":
+  battle_time+=dt
+  player_hurt=maxf(0.0,player_hurt-dt)
   var input_vector := touch_joy
   input_vector.x += float(Input.is_physical_key_pressed(KEY_D))-float(Input.is_physical_key_pressed(KEY_A))
   input_vector.y += float(Input.is_physical_key_pressed(KEY_W))-float(Input.is_physical_key_pressed(KEY_S))
@@ -108,27 +119,56 @@ func _process(dt: float) -> void:
    if reload_time <= 0.0:
     var n: int = mini(12-ammo,reserve); ammo += n; reserve -= n
   if shoot_hold: fire()
+  # A short arrival grace period lets the player orient before the first attack.
+  if battle_time>2.0 and not encounter_clear:
+   update_enemies(dt)
   ui_timer = maxf(0,ui_timer-dt)
  queue_redraw()
+
+func update_enemies(dt: float) -> void:
+ for mob in targets:
+  var damage: int=mob.update(dt,pos,player_hp>0)
+  if damage>0 and player_hp>0:
+   if anim.stance=="prone" and mob.kind!=0 and mob.kind!=4: damage=maxi(1,roundi(float(damage)*0.65))
+   elif anim.stance=="crouch" and mob.kind!=0 and mob.kind!=4:damage=maxi(1,roundi(float(damage)*0.8))
+   player_hp=maxi(0,player_hp-damage);player_hurt=0.24
+   if player_hp==0:
+    shoot_hold=false;touch_joy=Vector2.ZERO;mode="defeat"
+    announce("РИН ВЫВЕДЕНА ИЗ БОЯ")
+    break
+ # Soft separation keeps living enemies from stacking on the same point.
+ for i in range(targets.size()):
+  if not targets[i].living():continue
+  for j in range(i+1,targets.size()):
+   if not targets[j].living():continue
+   var diff: Vector2=targets[i].p-targets[j].p
+   var distance: float=diff.length()
+   if distance<0.9 and distance>0.01:
+    var push: Vector2=diff.normalized()*(0.9-distance)*minf(0.5,dt*4.0)
+    targets[i].p+=push;targets[j].p-=push
 
 func announce(message: String) -> void:
  ui_status = message; ui_timer = 2.3
 
 func fire() -> void:
- if shot_cool>0.0 or reload_time>0.0 or anim.jumping: return
+ if mode!="game" or player_hp<=0 or shot_cool>0.0 or reload_time>0.0 or anim.jumping: return
  if ammo<=0: reload(); return
  ammo -= 1; shot_cool = 0.22; shot_flash = 0.08
  var best: int = -1; var nearest: float = 50.0
  for i in range(targets.size()):
-  if int(targets[i]["hp"]) <= 0: continue
-  var rel: Vector2 = Vector2(targets[i]["p"])-pos
+  if not targets[i].living(): continue
+  var rel: Vector2 = targets[i].p-pos
   var depth: float = rel.dot(forward)
   if depth>0 and depth<nearest and absf(rel.dot(right))<1.2+depth*0.025:
    nearest=depth; best=i
  if best >= 0:
-  targets[best]["hp"] = int(targets[best]["hp"])-1
-  if int(targets[best]["hp"]) == 0: kills+=1; announce("ТРЕНИРОВКА ЗАВЕРШЕНА" if kills==5 else "ЦЕЛЬ УСТРАНЕНА")
-  else: announce("ПОПАДАНИЕ")
+  var target: Mob=targets[best]
+  if target.take_hit():
+   kills+=1
+   if kills==ENEMY_COUNT:
+    encounter_clear=true;announce("СЕКТОР ОЧИЩЕН")
+   else:announce(target.display_name()+" УНИЧТОЖЕН")
+  else:announce("ПОПАДАНИЕ")
  if ammo == 0: reload()
 
 func reload() -> void:
@@ -171,6 +211,10 @@ func _input(event: InputEvent) -> void:
   else: drag_at(event.position,event.relative,99)
 
 func press_at(p: Vector2,id: int) -> void:
+ if mode=="defeat":
+  if Rect2(460,410,360,72).has_point(p):start_game()
+  elif Rect2(16,16,115,39).has_point(p):mode="lobby"
+  return
  if mode=="lobby":
   if Rect2(945,540,310,92).has_point(p): start_game()
   return
@@ -258,9 +302,8 @@ func draw_city() -> void:
   if dep>NEAR and dep<160:
    drawlist.append({"o":o,"depth":dep})
  for t in targets:
-  if t["hp"]>0:
-   var dep: float=local_of(t["p"]).y
-   if dep>NEAR: drawlist.append({"o":{"p":t["p"],"kind":"target","height":1.7,"hp":t["hp"]},"depth":dep})
+  var dep: float=local_of(t.p).y
+  if dep>NEAR and dep<100.0:drawlist.append({"o":{"p":t.p,"kind":"mob","mob":t},"depth":dep})
  drawlist.sort_custom(func(a,b): return a["depth"]>b["depth"])
  for entry in drawlist: draw_prop(entry["o"],entry["depth"])
  # Fine rain, subtle on-screen vignette lines.
@@ -293,8 +336,26 @@ func draw_prop(o: Dictionary, dep: float) -> void:
   for k in range(5,0,-1): draw_circle(end,scale_factor*float(k)*.14,Color(0.31,0.80,0.87,0.035))
  elif kind=="crate":
   var r:=Rect2(p-Vector2(.6,1.3)*scale_factor,Vector2(1.2,1.3)*scale_factor); draw_rect(r,Color("364350"));draw_rect(r,Color("141d2b"),false,2);draw_line(r.position,r.end,Color("69788a"),2)
- elif kind=="target":
-  var h:float=1.7*scale_factor; var r:=Rect2(p-Vector2(h*.24,h),Vector2(h*.48,h));draw_rect(r,Color("2f3041"));draw_rect(r,PINK,false,1.5);draw_circle(p-Vector2(0,h*.82),h*.14,Color("f08099")); draw_rect(Rect2(p-Vector2(h*.20,h*1.12),Vector2(h*.4,3)),Color("301727"));draw_rect(Rect2(p-Vector2(h*.20,h*1.12),Vector2(h*.4*float(o["hp"])/3.0,3)),PINK)
+ elif kind=="mob":
+  draw_enemy(o["mob"],p,scale_factor)
+
+func draw_enemy(mob: Mob,foot: Vector2,scale_factor: float) -> void:
+ var h: float=mob.height()*scale_factor
+ if foot.x+h<0.0 or foot.x-h>W or foot.y+h<0.0 or foot.y-h>H:return
+ var shadow: float=maxf(2.0,h*(0.33 if mob.kind>=4 else 0.22))
+ draw_set_transform(foot,0,Vector2(1.0,0.26))
+ draw_circle(Vector2.ZERO,shadow,Color(0.02,0.02,0.05,0.48))
+ draw_set_transform(Vector2.ZERO)
+ mob.paint(self,foot,h,(pos-mob.p).dot(right)>0.0)
+ if not mob.living():return
+ if mob.attack_flash>0.0 and mob.kind!=0 and mob.kind!=4:
+  draw_line(foot-Vector2(0,h*0.53),project(pos,1.15),Color(1.0,0.35,0.30,mob.attack_flash*4.0),1.8,true)
+ var bar_w: float=clampf(h*0.65,20.0,90.0)
+ var bar_p: Vector2=foot-Vector2(bar_w*0.5,h*1.18)
+ draw_rect(Rect2(bar_p,Vector2(bar_w,4)),Color("291b31"))
+ draw_rect(Rect2(bar_p,Vector2(bar_w*float(mob.hp)/float(mob.max_hp),4)),PINK)
+ if h>52.0:
+  text_at(bar_p+Vector2(0,-5),mob.display_name(),clampi(roundi(h*.12),12,17),Color("e7cbdc"))
 
 func _draw() -> void:
  if mode=="lobby":
@@ -302,7 +363,7 @@ func _draw() -> void:
   panel(Rect2(0,0,W,H),Color(0.015,0.02,0.06,0.25),Color.TRANSPARENT)
   panel(Rect2(925,478,345,190));text_at(Vector2(949,510),"СЕКТОР 07 • ТРЕНИРОВКА",20,GOLD);text_at(Vector2(950,534),"Одиночный / камера TPP • 2D",15,CYAN)
   button(Rect2(945,540,310,92),"НАЧАТЬ",true)
-  panel(Rect2(18,610,410,74));text_at(Vector2(32,637),"BLACK SIGNAL / HD2D",20,GOLD);text_at(Vector2(32,662),"Тест анимаций Рин • предрелиз",15)
+  panel(Rect2(18,610,410,74));text_at(Vector2(32,637),"BLACK SIGNAL / HD2D",20,GOLD);text_at(Vector2(32,662),"Шесть типов противников • predemo",15)
   return
  if mode=="loading":
   draw_texture_rect(LOADING,Rect2(0,0,W,H),false);return
@@ -316,19 +377,28 @@ func _draw() -> void:
  if shot_flash>0:
   draw_circle(foot+Vector2(-38,-105),12*shot_flash/.08,Color("ffda9a"));draw_line(foot+Vector2(-38,-105),Vector2(W*.5,HORIZON+70),Color(1,.8,.4,shot_flash*5),2)
  draw_hud()
+ if player_hurt>0.0:draw_rect(Rect2(0,0,W,H),Color(0.8,0.04,0.08,player_hurt*0.40))
+ if mode=="defeat":
+  panel(Rect2(0,0,W,H),Color(0.02,0.02,0.05,0.75),Color.TRANSPARENT)
+  panel(Rect2(390,245,500,275));text_at(Vector2(480,310),"СИГНАЛ ПОТЕРЯН",30,PINK)
+  text_at(Vector2(477,363),"Уничтожено: "+str(kills)+" / "+str(ENEMY_COUNT),22,GOLD)
+  button(Rect2(460,410,360,72),"ПОВТОРИТЬ",true);button(action_rects["back"],"ЛОББИ")
+ elif encounter_clear:
+  panel(Rect2(480,92,320,65))
+  text_at(Vector2(520,132),"СЕКТОР ОЧИЩЕН",23,CYAN)
 
 func draw_hud() -> void:
  button(action_rects["back"],"ЛОББИ")
- panel(Rect2(151,16,228,74));text_at(Vector2(165,41),"RIN  /  SECTOR 07",19,GOLD);text_at(Vector2(165,65),"Цели: "+str(kills)+" / 5",17,CYAN)
+ panel(Rect2(151,16,228,74));text_at(Vector2(165,41),"RIN  /  SECTOR 07",19,GOLD);text_at(Vector2(165,65),"Мобы: "+str(kills)+" / "+str(ENEMY_COUNT),17,CYAN)
  var deg: int=posmod(int(rad_to_deg(yaw)),360);text_at(Vector2(575,35),"N  ·  %03d°"%deg,20,GOLD);draw_line(Vector2(460,47),Vector2(820,47),Color(0.8,0.8,0.86,.6),1)
  panel(Rect2(1110,16,144,130));text_at(Vector2(1120,37),"СЕКТОР 07",14,GOLD);draw_rect(Rect2(1154,46,55,90),Color("354257"));draw_line(Vector2(1181,46),Vector2(1181,136),Color("808d9d"),1)
  for t in targets:
-  if t["hp"]>0:
-   var a:Vector2=t["p"];draw_circle(Vector2(1181+a.x*3,clampf(136-(a.y-pos.y)*.7,48,135)),3,PINK)
+  if t.living() and absf(t.p.y-pos.y)<120.0:
+   var a:Vector2=t.p;draw_circle(Vector2(1181+a.x*3,clampf(136-(a.y-pos.y)*.7,48,135)),3,PINK)
  draw_circle(Vector2(1181+pos.x*3,126),4,CYAN)
  draw_circle(JOY,80,Color(0.01,0.04,0.07,0.45));draw_arc(JOY,80,0,TAU,72,Color(0.85,0.9,1,.52),2,true);draw_circle(JOY+Vector2(touch_joy.x,-touch_joy.y)*55,35,Color(0.52,0.62,0.72,0.46));draw_arc(JOY+Vector2(touch_joy.x,-touch_joy.y)*55,35,0,TAU,48,Color(0.87,0.91,1,.5),1.4,true)
  button(action_rects["fire"],"ОГОНЬ",shoot_hold);button(action_rects["reload"],"ПЕРЕЗАР.",reload_time>0);button(action_rects["jump"],"ПРЫЖОК",anim.jumping);button(action_rects["crouch"],"ПРИСЕСТЬ",anim.target_stance=="crouch");button(action_rects["prone"],"ЛЕЧЬ",anim.target_stance=="prone");button(action_rects["sprint"],"БЕГ",sprint_latch)
- panel(Rect2(430,595,425,95));text_at(Vector2(449,621),"K-9   /   "+anim.state_label(),17,GOLD);text_at(Vector2(449,654),"%02d  /  %d"%[ammo,reserve],28);draw_rect(Rect2(449,669,386,6),Color("c6dfdc"));text_at(Vector2(700,653),"100 HP",16,CYAN)
+ panel(Rect2(430,595,425,95));text_at(Vector2(449,621),"K-9   /   "+anim.state_label(),17,GOLD);text_at(Vector2(449,654),"%02d  /  %d"%[ammo,reserve],28);draw_rect(Rect2(449,669,386,6),Color("392334"));draw_rect(Rect2(449,669,386*float(player_hp)/100.0,6),CYAN if player_hp>30 else PINK);text_at(Vector2(700,653),str(player_hp)+" HP",16,CYAN)
  if reload_time>0: draw_rect(Rect2(449,680,386*(1-reload_time/1.5),4),GOLD)
  if ui_timer>0: text_at(Vector2(540,123),ui_status,21,GOLD)
  var aim:=Vector2(W*.5,HORIZON+70);draw_arc(aim,13,0,TAU,32,Color(1,1,1,.65),1.4,true);draw_line(aim-Vector2(18,0),aim+Vector2(18,0),Color(1,1,1,.55),1);draw_line(aim-Vector2(0,18),aim+Vector2(0,18),Color(1,1,1,.55),1)
@@ -353,6 +423,27 @@ func run_smoke() -> void:
  anim.request_prone()
  for i in range(180): anim.tick(.016,0,false)
  assert(anim.stance=="stand" and anim.clip=="idle")
- fire();assert(ammo==11)
- print("BLACK_SIGNAL_SMOKE_OK: walk run jump crouch prone stand fire; pure 2D")
+ assert(targets.size()==ENEMY_COUNT)
+ for i in range(ENEMY_COUNT):
+  var unit: Mob=targets[i]
+  assert(unit.kind==i and unit.max_hp>0 and unit.texture!=null)
+  assert(unit.texture.get_width()==1152 and unit.texture.get_height()==3360)
+  assert(unit.frame_for(Mob.DEATH,9.0)==17)
+  assert(unit.source_rect(Mob.DEATH,9.0).end.y<=3360.0)
+  var old_hp: int=unit.hp
+  assert(unit.take_hit()==false and unit.hp==old_hp-1)
+  unit.set_clip(Mob.IDLE)
+  unit.cool=0.0
+  unit.update(.016,unit.p+Vector2(0,0.5),true)
+  assert(unit.clip==Mob.ATTACK)
+  var damage: int=0
+  for n in range(90):damage+=unit.update(.016,unit.p+Vector2(0,0.5),true)
+  assert(damage==int(Mob.STATS[i][4]))
+  while unit.living():unit.take_hit()
+  assert(unit.clip==Mob.DEATH and unit.hp==0)
+  for n in range(100):unit.update(.016,pos,true)
+  assert(unit.frame_for(unit.clip,unit.time)==17)
+ start_game();mode="game"
+ fire();assert(ammo==11 and targets[0].hp==targets[0].max_hp-1)
+ print("BLACK_SIGNAL_SMOKE_OK: walk run jump crouch prone stand fire; six mobs + 540 frames + attacks + death; pure 2D")
  get_tree().quit()
