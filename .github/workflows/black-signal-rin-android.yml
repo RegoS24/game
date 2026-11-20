@@ -29,6 +29,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install --with-deps chromium
           node smoke-inventory.cjs
+          node smoke-tactical.cjs
       - name: Upload inventory screenshots
         uses: actions/upload-artifact@v4
         with:
@@ -36,6 +37,7 @@ jobs:
           path: |
             black-signal-rin/inventory-desktop.png
             black-signal-rin/inventory-mobile.png
+            black-signal-rin/tactical-mobile.png
       - name: Build APK
         run: bash build-apk.sh
       - name: Upload APK
@@ -47,5 +49,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="black-signal-rin-v0.4-${GITHUB_RUN_NUMBER}"
-          gh release create "$tag" out/BLACK-SIGNAL-RIN.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL RIN — v0.4 ($GITHUB_RUN_NUMBER)" --notes 'Android debug-signed build. Offline, landscape.' --prerelease
+          tag="black-signal-rin-v0.5-${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" out/BLACK-SIGNAL-RIN.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL RIN — v0.5 ($GITHUB_RUN_NUMBER)" --notes 'Android debug-signed build. Offline, landscape.' --prerelease
