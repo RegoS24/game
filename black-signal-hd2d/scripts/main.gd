@@ -562,6 +562,17 @@ func run_smoke() -> void:
  assert(not anim.jumping and anim.clip=="idle")
  assert(anim.index_for("walk",59.9)==0)
  assert(anim.index_for("jump",100)==47)
+ # Verify full two-leg gait cycles are traversed, including both opposite peaks.
+ for gait in ["run","crouch_walk","crawl"]:
+  var tester=Animator.new()
+  tester.set_clip(gait,0.0)
+  tester.moving=1.0
+  var count: int=int(Animator.COUNT[gait])
+  var quadrant: float=float(Animator.DURATION[gait])/4.0
+  for step in range(4):
+   for substep in range(10):tester.advance_gait(quadrant/10.0)
+   assert(tester.frame_index()==int((step+1)*count/4.0)%count)
+
  assert(anim.jump_lift()==0.0)
  anim.request_crouch()
  for i in range(100): anim.tick(.016,0,false)

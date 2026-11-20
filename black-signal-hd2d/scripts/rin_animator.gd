@@ -9,7 +9,7 @@ const SHEETS = {
 const COUNT = {"idle":48,"walk":60,"run":48,"jump":48,"crouch":40,"prone":48,"crouch_walk":40,"crawl":40}
 const TILE_W: float = 384.0
 const TILE_H: float = 512.0
-const DURATION = {"idle":1.8,"walk":1.0,"run":0.70,"jump":0.78,"crouch":0.48,"prone":0.66,"crouch_walk":1.12,"crawl":1.50}
+const DURATION = {"idle":1.8,"walk":1.0,"run":0.80,"jump":0.78,"crouch":0.48,"prone":0.66,"crouch_walk":1.12,"crawl":1.50}
 var clip: String = "idle"
 var frame: float = 0.0
 var previous_clip: String = "idle"
@@ -108,15 +108,18 @@ func tick(dt: float, movement: float, sprint: bool) -> void:
    frame=float(COUNT[stance])-1
    return
   if clip!=low_clip:set_clip(low_clip,0.0)
-  var low_rate: float=float(COUNT[clip])/float(DURATION[clip])*clampf(moving,0.20,1.0)
-  frame=fposmod(frame+dt*low_rate,float(COUNT[clip]))
+  advance_gait(dt)
   return
  var desired: String="idle" if not locomotion else ("run" if sprint else "walk")
  if desired!=clip:
   var preserve: bool=(clip=="walk" or clip=="run") and (desired=="walk" or desired=="run")
   set_clip(desired,0.0,preserve)
- var rate: float=float(COUNT[clip])/float(DURATION[clip])
- if locomotion: rate*=clampf(moving,0.20,1.0)
+ if locomotion:advance_gait(dt)
+ else:frame=fposmod(frame+dt*float(COUNT[clip])/float(DURATION[clip]),float(COUNT[clip]))
+
+func advance_gait(dt: float) -> void:
+ # Fractional phase is continuous throughout the full two-leg cycle.
+ var rate: float=float(COUNT[clip])/float(DURATION[clip])*clampf(moving,0.0,1.0)
  frame=fposmod(frame+dt*rate,float(COUNT[clip]))
 func paint(canvas: CanvasItem, at: Vector2, scale_factor: float, extra: Vector2=Vector2.ZERO) -> void:
  var dst:=Rect2(at-Vector2(96,224)*scale_factor+extra-Vector2(0,jump_lift()),Vector2(192,256)*scale_factor)
