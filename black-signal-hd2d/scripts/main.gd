@@ -208,7 +208,8 @@ func ground_poly(points: Array[Vector2], color: Color) -> void:
  if clipped.size()<3: return
  var screen: PackedVector2Array = []
  for p in clipped: screen.append(Vector2(W*.5+p.x*F/p.y,HORIZON+3.1*F/p.y))
- draw_colored_polygon(screen,color)
+ if Geometry2D.triangulate_polygon(screen).size()>0:
+  draw_colored_polygon(screen,color)
 
 func text_at(p: Vector2, value: String, size: int=18, color: Color=Color.WHITE) -> void:
  draw_string(font,p,value,HORIZONTAL_ALIGNMENT_LEFT,-1,size,color)
@@ -333,7 +334,7 @@ func run_smoke() -> void:
  assert(not anim.jumping and anim.clip=="idle")
  anim.request_crouch()
  for i in range(100): anim.tick(.016,0,false)
- assert(anim.stance=="crouch" and anim.frame_index()==int(anim.COUNT["crouch"])-1)
+ assert(anim.stance=="crouch" and anim.frame_index()==int(Animator.COUNT["crouch"])-1)
  anim.request_prone()
  for i in range(100): anim.tick(.016,0,false)
  assert(anim.stance=="prone")
