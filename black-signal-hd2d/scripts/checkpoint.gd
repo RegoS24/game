@@ -32,7 +32,9 @@ static func validate(data: Variant) -> bool:
  var unique_stations: Dictionary={}
  for station in stations:
   if typeof(station)!=TYPE_INT and typeof(station)!=TYPE_FLOAT:return false
-  if int(station)<0 or int(station)>2 or float(station)!=float(int(station)):return false
+  var station_value: float=float(station)
+  if not is_finite(station_value):return false
+  if station_value<0.0 or station_value>2.0 or station_value!=floorf(station_value):return false
   if unique_stations.has(int(station)):return false
   unique_stations[int(station)]=true
  var enemies: Variant=data.get("enemies",[])
