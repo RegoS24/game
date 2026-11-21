@@ -74,7 +74,13 @@ static func read(path: String=SAVE_PATH) -> Dictionary:
  if not FileAccess.file_exists(path):return {}
  var file:=FileAccess.open(path,FileAccess.READ)
  if file==null:return {}
+ # Reject oversized files before allocating their full contents in memory.
+ # A damaged or hostile checkpoint must not stall a low-memory Android device.
+ if file.get_length()>32768:
+  file.close()
+  return {}
  var raw: String=file.get_as_text()
+ file.close()
  if raw.length()>32768:return {}
  var json:=JSON.new()
  if json.parse(raw)!=OK or not validate(json.data):return {}
