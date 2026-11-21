@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-21: Checkpoint validator now rejects fractional/non-finite HP, ammunition, kill counts, mission phase, version, and enemy kind/HP rather than truncating them with `int()`. Added headless regression cases. Commits cd2ab8d and 525d1efa; GitHub Actions and APK execution **not yet verified**. Remaining blockers: validate Android lifecycle and save recovery on hardware; improve authored character poses and remove shimmering.
+
 - 2026-11-21: Hardened checkpoint validation against non-finite player/enemy coordinates, non-finite aim/timer values and duplicate/partial medical station IDs. Added headless smoke assertions for these corrupt-save cases. Source committed; **CI and Android runtime results not yet verified**. Remaining save blockers: full campaign slots, durable write-failure recovery and real-device lifecycle tests.
 
 
