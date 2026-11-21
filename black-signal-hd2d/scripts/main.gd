@@ -704,6 +704,22 @@ func run_smoke() -> void:
   covered_damage+=blocked_guard.update(.016,Vector2(0,0),true,cover_wall)
  assert(covered_damage==0)
  assert(not Cover.segment_blocked(Vector2(0,10),Vector2(0,0),[]))
+ # Patrol and pursuit both use physical world collision; enemies must approach, not retreat.
+ var patrol: Mob=Mob.new(0,Vector2(0,0))
+ patrol.activated=false
+ patrol.age=0.0
+ var patrol_block: Array[Rect2]=[Rect2(Vector2(-1,-0.9),Vector2(2,0.5))]
+ for step in range(90):
+  patrol.update(.016,Vector2(0,50),true,patrol_block)
+  assert(not Cover.circle_overlaps(patrol.p,patrol.radius(),patrol_block))
+ var hunter: Mob=Mob.new(0,Vector2(0,0))
+ var prey: Vector2=Vector2(0,12)
+ var before_distance: float=hunter.p.distance_to(prey)
+ for step in range(70):hunter.update(.016,prey,true)
+ assert(hunter.p.distance_to(prey)<before_distance-1.0)
+ assert(hunter.heading.dot((prey-hunter.p).normalized())>0.9)
+ assert(hunter.view_for((prey-hunter.p).normalized())==Mob.FRONT)
+ print("BLACK_SIGNAL_ENEMY_BEHAVIOR_OK: chase direction, facing and patrol collisions")
  print("BLACK_SIGNAL_COVER_SMOKE_OK: collision, sliding, hitscan and enemy cover")
  for i in range(ENEMY_COUNT):
   var unit: Mob=targets[i]
