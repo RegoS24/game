@@ -11,9 +11,34 @@ static func circle_overlaps(p: Vector2,radius: float,rects: Array[Rect2]) -> boo
  return false
 
 static func segment_blocked(a: Vector2,b: Vector2,rects: Array[Rect2]) -> bool:
+ # Liang-Barsky slab clipping; Rect2 in Godot does not provide intersects_segment().
+ var delta: Vector2=b-a
  for rect in rects:
-  if rect.intersects_segment(a,b):
-   return true
+  var enter: float=0.0
+  var exit: float=1.0
+  var valid: bool=true
+  for axis in range(2):
+   var start: float=a.x if axis==0 else a.y
+   var ray: float=delta.x if axis==0 else delta.y
+   var low: float=rect.position.x if axis==0 else rect.position.y
+   var high: float=rect.end.x if axis==0 else rect.end.y
+   if absf(ray)<0.000001:
+    if start<low or start>high:
+     valid=false
+     break
+   else:
+    var near: float=(low-start)/ray
+    var far: float=(high-start)/ray
+    if near>far:
+     var swap: float=near
+     near=far
+     far=swap
+    enter=maxf(enter,near)
+    exit=minf(exit,far)
+    if enter>exit:
+     valid=false
+     break
+  if valid:return true
  return false
 
 static func move_circle(origin: Vector2,delta: Vector2,radius: float,rects: Array[Rect2]) -> Vector2:
