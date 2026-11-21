@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.8.1
+- Sidewalk and road crates now have real world-space solid collision and projectile line-of-sight blocking (not screen-space decoration).
+- Rin and ground enemies slide around crate edges; basic enemy flank steering responds when its direct approach is blocked.
+- Enemy ground attacks cannot damage Rin through cover; shooting through cover no longer hits ground enemies. Drones intentionally shoot above low cover.
+- New static cover tests for collision, sliding, hitscan, and protection against enemy fire.
+- Limitations: rudimentary AI, low-fidelity art, no realistic ballistics or destructible cover.
+
+
 ## v0.8.0
 - New Chapter 01 mission state machine: recover terminal data → clear six enemies → escape.
 - Added objective HUD, spatial waypoint and minimap marker, proximity-based on-screen interaction and E key support.

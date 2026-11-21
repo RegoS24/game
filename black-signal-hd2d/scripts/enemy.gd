@@ -1,4 +1,5 @@
 extends RefCounted
+const Cover = preload("res://scripts/cover.gd")
 ## Animated 2D combat unit. Positions and combat geometry are entirely planar.
 const NAMES = ["РЕЙДЕР","ОХРАННИК","КИБЕРБРУТ","НЕТРАННЕР","КИБЕРПЁС","ДРОН"]
 const IDS = ["raider","guard","brute","hacker","hound","drone"]
@@ -89,7 +90,7 @@ func take_hit() -> bool:
   hp=0;set_clip(DEATH);return true
  return false
 
-func update(dt: float, player: Vector2, player_alive: bool) -> int:
+func update(dt: float, player: Vector2, player_alive: bool, obstacles: Array[Rect2]=[]) -> int:
  dt=clampf(dt,0.0,0.10)
  age+=dt;hit_flash=maxf(0.0,hit_flash-dt);attack_flash=maxf(0.0,attack_flash-dt)
  blend=minf(1.0,blend+dt/0.075)
@@ -102,6 +103,8 @@ func update(dt: float, player: Vector2, player_alive: bool) -> int:
  var rel: Vector2=player-p
  var distance: float=rel.length()
  var reach: float=float(STATS[kind][3])
+ # Flying drones are above low crates; ground troops need actual line of sight.
+ var blocked: bool=kind!=5 and Cover.segment_blocked(p,player,obstacles)
  if distance<22.0:activated=true
  elif distance>39.0:activated=false
  if clip==ATTACK:
@@ -110,7 +113,7 @@ func update(dt: float, player: Vector2, player_alive: bool) -> int:
   # Telegraph first; the attack deals damage exactly once at its active frame.
   if time>=float(DURATIONS[ATTACK])*0.48 and not attack_done:
    attack_done=true;attack_flash=0.13
-   if distance<=reach+0.65:damage=int(STATS[kind][4])
+   if distance<=reach+0.65 and not blocked:damage=int(STATS[kind][4])
   if time>=float(DURATIONS[ATTACK]):
    cool=float(STATS[kind][5]);set_clip(IDLE)
   return damage
@@ -122,17 +125,23 @@ func update(dt: float, player: Vector2, player_alive: bool) -> int:
    heading=Vector2(0,patrol_direction)
    set_clip(WALK);p.y+=patrol_direction*float(STATS[kind][1])*0.24*dt
   else:set_clip(IDLE)
- elif distance<=reach and cool<=0.0:
+ elif distance<=reach and cool<=0.0 and not blocked:
   if distance>0.01:heading=rel.normalized()
   set_clip(ATTACK)
- elif distance>reach*0.86:
+ elif distance>reach*0.86 or blocked:
   var running: bool=distance>reach+3.4
   set_clip(RUN if running else WALK)
   var speed: float=float(STATS[kind][2] if running else STATS[kind][1])
   var step: float=minf(speed*dt,maxf(0.0,distance-reach*0.81))
   if step>0.0001:
-   heading=rel.normalized()
-   p+=heading*step
+   var before: Vector2=p
+   var candidate: Vector2=Cover.move_circle(p,rel.normalized()*step,radius(),obstacles)
+   # A stopped enemy should flank the obstacle rather than clip through it.
+   if candidate.distance_squared_to(p)<step*step*0.10 and blocked:
+    candidate=Cover.nearest_unblocked_flank(p,player,radius(),step,obstacles,kind%2==0)
+   if candidate.distance_squared_to(before)>0.0000001:
+    heading=(candidate-before).normalized()
+    p=candidate
  else:
   if distance>0.01:heading=rel.normalized()
   set_clip(IDLE)

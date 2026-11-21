@@ -4,6 +4,7 @@ const Animator = preload("res://scripts/rin_animator.gd")
 const RIN_HEIGHT: float=1.68
 const Mob = preload("res://scripts/enemy.gd")
 const Mission = preload("res://scripts/mission.gd")
+const Cover = preload("res://scripts/cover.gd")
 const W: float = 1280.0
 const H: float = 720.0
 const F: float = 540.0
@@ -57,6 +58,7 @@ var ammo: int = 12
 var reserve: int = 108
 var kills: int = 0
 var world: Array[Dictionary] = []
+var cover_rects: Array[Rect2] = []
 var targets: Array[Mob] = []
 var player_hp: int = 100
 var player_hurt: float = 0.0
@@ -83,14 +85,22 @@ func _ready() -> void:
   run_smoke.call_deferred()
 
 func build_world() -> void:
- world.clear(); targets.clear()
+ world.clear(); targets.clear(); cover_rects.clear()
  for z in range(-4,13):
   for x in [-1,1]:
    var zz: float = float(z)*19.0+float(x)*1.7
    world.append({"p":Vector2(float(x)*12.5,zz),"kind":"building","height":float(12+(abs(z*13+x*7)%9)),"side":x,"id":z})
    world.append({"p":Vector2(float(x)*6.8,zz+5.0),"kind":"light","height":5.2,"side":x,"id":z})
    if z%2 == 0:
-    world.append({"p":Vector2(float(x)*5.2,zz+9.0),"kind":"crate","height":1.3,"side":x,"id":z})
+    var side_crate: Vector2=Vector2(float(x)*5.2,zz+9.0)
+    world.append({"p":side_crate,"kind":"crate","height":1.3,"width":1.2,"side":x,"id":z})
+    cover_rects.append(Rect2(side_crate-Vector2(0.6,0.60),Vector2(1.2,1.20)))
+ # Purposeful mid-road barriers introduce a real flank-and-cover choice.
+ var barriers: Array[Vector2]=[Vector2(2.1,17.0),Vector2(-2.1,40.0),Vector2(2.2,61.0),Vector2(-2.1,84.0),Vector2(2.1,108.0)]
+ for i in range(barriers.size()):
+  var spot: Vector2=barriers[i]
+  world.append({"p":spot,"kind":"crate","height":1.6,"width":1.8,"side":0,"id":100+i})
+  cover_rects.append(Rect2(spot-Vector2(.9,.7),Vector2(1.8,1.4)))
  # Six separate encounters spaced along the avenue. All six use original illustrated atlases.
  for i in range(ENEMY_COUNT):
   var lane: float=-0.58 if i==0 else (-3.5 if i%2==0 else 3.5)
@@ -228,7 +238,7 @@ func _process(dt: float) -> void:
   var stance_speed: float=(5.8 if sprint else 3.1)*anim.speed_factor()
   var goal: Vector2 = (right*input_vector.x+forward*input_vector.y)*stance_speed
   motion = motion.lerp(goal,1.0-exp(-dt*(10.5 if goal.length()>motion.length() else 8.0)))
-  pos += motion*dt
+  pos=Cover.move_circle(pos,motion*dt,0.31,cover_rects)
   pos.x = clampf(pos.x,-5.9,5.9); pos.y = clampf(pos.y,-65.0,215.0)
   var real_speed: float=motion.length()
   anim.tick(dt,minf(1.0,real_speed/maxf(0.1,stance_speed)),sprint and real_speed>3.5 and anim.stance=="stand")
@@ -247,7 +257,7 @@ func _process(dt: float) -> void:
 
 func update_enemies(dt: float) -> void:
  for mob in targets:
-  var damage: int=mob.update(dt,pos,player_hp>0)
+  var damage: int=mob.update(dt,pos,player_hp>0,cover_rects)
   if damage>0 and player_hp>0:
    if anim.stance=="prone" and mob.kind!=0 and mob.kind!=4: damage=maxi(1,roundi(float(damage)*0.65))
    elif anim.stance=="crouch" and mob.kind!=0 and mob.kind!=4:damage=maxi(1,roundi(float(damage)*0.8))
@@ -266,7 +276,8 @@ func update_enemies(dt: float) -> void:
    var required: float=targets[i].radius()+targets[j].radius()+0.12
    if distance<required and distance>0.01:
     var push: Vector2=diff.normalized()*(required-distance)*minf(0.5,dt*4.0)
-    targets[i].p+=push;targets[j].p-=push
+    targets[i].p=Cover.move_circle(targets[i].p,push,targets[i].radius(),cover_rects)
+    targets[j].p=Cover.move_circle(targets[j].p,-push,targets[j].radius(),cover_rects)
 
 func announce(message: String) -> void:
  ui_status = message; ui_timer = 2.3
@@ -305,6 +316,7 @@ func aim_target() -> int:
   if not mob.living():continue
   var dep: float=local_of(mob.p).y
   if dep<=NEAR or dep>=nearest:continue
+  if mob.kind!=5 and Cover.segment_blocked(pos,mob.p,cover_rects):continue
   var foot: Vector2=project(mob.p)
   var screen_h: float=mob.height()*F/dep
   var radius: float=mob.width()*0.5*F/dep+5.0
@@ -493,7 +505,12 @@ func draw_prop(o: Dictionary, dep: float) -> void:
   draw_line(p,end,Color("151c27"),maxf(1,scale_factor*.12)); draw_line(end,end+Vector2(-float(o["side"])*.9*scale_factor,0),CYAN,maxf(1,scale_factor*.1))
   for k in range(5,0,-1): draw_circle(end,scale_factor*float(k)*.14,Color(0.31,0.80,0.87,0.035))
  elif kind=="crate":
-  var r:=Rect2(p-Vector2(.6,1.3)*scale_factor,Vector2(1.2,1.3)*scale_factor); draw_rect(r,Color("364350"));draw_rect(r,Color("141d2b"),false,2);draw_line(r.position,r.end,Color("69788a"),2)
+  var crate_w: float=float(o.get("width",1.2))
+  var crate_h: float=float(o.get("height",1.3))
+  var r:=Rect2(p-Vector2(crate_w*.5,crate_h)*scale_factor,Vector2(crate_w,crate_h)*scale_factor)
+  draw_rect(r,Color("364350"));draw_rect(r,Color("141d2b"),false,maxf(1.0,scale_factor*.07))
+  draw_line(r.position,r.end,Color("69788a"),maxf(1.0,scale_factor*.05))
+  draw_line(r.position+Vector2(0,r.size.y),r.position+Vector2(r.size.x,0),Color("8c9eb1"),maxf(1.0,scale_factor*.05))
  elif kind=="mission":
   var scan: bool=mission.phase==Mission.Phase.SCAN
   var glow: Color=CYAN if scan else GOLD
@@ -668,6 +685,26 @@ func run_smoke() -> void:
  for i in range(180): anim.tick(.016,0,false)
  assert(anim.stance=="stand" and anim.clip=="idle")
  assert(targets.size()==ENEMY_COUNT)
+ assert(cover_rects.size()>5)
+ for unit in targets:
+  assert(not Cover.circle_overlaps(unit.p,unit.radius(),cover_rects))
+ # Combat and movement must respect true-world geometry.
+ var blockers: Array[Rect2]=[Rect2(Vector2(-.5,-.75),Vector2(1.0,1.50))]
+ assert(Cover.segment_blocked(Vector2(-2,0),Vector2(2,0),blockers))
+ assert(not Cover.segment_blocked(Vector2(-2,2),Vector2(2,2),blockers))
+ var halted: Vector2=Cover.move_circle(Vector2(-2,0),Vector2(4,0),.3,blockers)
+ assert(halted.x<-.79 and not Cover.circle_overlaps(halted,.3,blockers))
+ var slid: Vector2=Cover.move_circle(Vector2(-.81,0),Vector2(.8,1.4),.3,blockers)
+ assert(slid.y>1.0 and not Cover.circle_overlaps(slid,.3,blockers))
+ var blocked_guard: Mob=Mob.new(1,Vector2(0,10))
+ blocked_guard.set_clip(Mob.ATTACK)
+ var covered_damage: int=0
+ var cover_wall: Array[Rect2]=[Rect2(Vector2(-1,4.0),Vector2(2,2.0))]
+ for step in range(70):
+  covered_damage+=blocked_guard.update(.016,Vector2(0,0),true,cover_wall)
+ assert(covered_damage==0)
+ assert(not Cover.segment_blocked(Vector2(0,10),Vector2(0,0),[]))
+ print("BLACK_SIGNAL_COVER_SMOKE_OK: collision, sliding, hitscan and enemy cover")
  for i in range(ENEMY_COUNT):
   var unit: Mob=targets[i]
   assert(unit.kind==i and unit.max_hp>0 and unit.texture!=null)
