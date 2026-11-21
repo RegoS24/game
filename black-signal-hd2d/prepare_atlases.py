@@ -14,8 +14,6 @@ LOOPS={"idle","walk","run"}
 TILE_W,TILE_H=384,512
 S=256
 cv2.setNumThreads(2)
-torch.set_num_threads(2)
-torch.set_num_interop_threads(1)
 
 # Deterministic restoration prevents flickering fabricated texture detail.
 print("RIN_STABLE_RESAMPLE_OK",flush=True)
