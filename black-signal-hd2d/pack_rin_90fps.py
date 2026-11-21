@@ -10,6 +10,7 @@ out=assets/"rin90"
 out.mkdir(exist_ok=True)
 W,H=384,512
 LIMIT=4096
+GUTTER=8
 COUNTS={"idle":162,"walk":90,"run":72,"jump":72,"crouch":45,"prone":61,"crouch_walk":104,"crawl":136}
 layouts={}
 sheets={}
@@ -29,19 +30,21 @@ for name,count in COUNTS.items():
  bottom=min(H,max(b[3] for b in boxes)+2)
  tile_w=right-left
  tile_h=bottom-top
- cols=min(count,LIMIT//tile_w)
- cap=cols*(LIMIT//tile_h)
- layouts[name]=[left,top,tile_w,tile_h,cols,cap]
+ stride_w=tile_w+2*GUTTER
+ stride_h=tile_h+2*GUTTER
+ cols=min(count,LIMIT//stride_w)
+ cap=cols*(LIMIT//stride_h)
+ layouts[name]=[left,top,tile_w,tile_h,cols,cap,GUTTER]
  sheets[name]=[]
  for page,start in enumerate(range(0,count,cap)):
   size=min(cap,count-start)
   used_cols=min(cols,size)
   rows=math.ceil(size/cols)
-  atlas=Image.new("RGBA",(used_cols*tile_w,rows*tile_h))
+  atlas=Image.new("RGBA",(used_cols*stride_w,rows*stride_h))
   assert max(atlas.size)<=LIMIT
   for j in range(size):
    tile=frame(start+j).crop((left,top,right,bottom))
-   atlas.paste(tile,(j%cols*tile_w,j//cols*tile_h))
+   atlas.paste(tile,(j%cols*stride_w+GUTTER,j//cols*stride_h+GUTTER))
   target=out/f"{name}_{page}.webp"
   atlas.save(target,lossless=True,method=3,exact=True)
   # Ensure the packer preserved RGBA data and page dimensions.

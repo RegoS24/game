@@ -70,7 +70,7 @@ const GYRO_RECTS: Dictionary={"gyro":Rect2(395,60,126,42),"sensitivity":Rect2(53
 
 func _ready() -> void:
  Engine.max_fps = 90
- texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+ texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
  load_aim_settings()
  # Avoid allocating all enemy textures while the lobby is being loaded.
  if DisplayServer.get_name() != "headless" and OS.has_feature("mobile"):
@@ -573,6 +573,7 @@ func run_smoke() -> void:
   var layout: Array=Animator.LAYOUT[name]
   var pages: Array=Animator.SHEETS[name]
   assert(pages.size()==ceili(float(count)/float(layout[5])))
+  assert(int(layout[6])>=8)
   for page in pages:
    assert(page.get_width()<=4096 and page.get_height()<=4096)
  assert(frame_total==742)

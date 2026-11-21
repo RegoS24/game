@@ -49,9 +49,8 @@ jobs:
       - name: Generate and validate animation atlases
         run: |
           python -m pip install numpy pillow opencv-python-headless
-          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0
-          curl -fL --retry 3 -o /tmp/realesr-animevideov3.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth
-          RIN_SR_WEIGHTS=/tmp/realesr-animevideov3.pth python black-signal-hd2d/prepare_atlases.py
+          python black-signal-hd2d/prepare_atlases.py | tee /tmp/rin_stable.log
+          grep -q RIN_STABLE_RESAMPLE_OK /tmp/rin_stable.log
           python black-signal-hd2d/prepare_mobs.py
           python black-signal-hd2d/prepare_locomotion.py | tee /tmp/rin_gait.log
           for gait in run crouch_walk crawl; do grep -q "RIN_ALTERNATION_OK $gait" /tmp/rin_gait.log; done
@@ -61,6 +60,9 @@ jobs:
         run: |
           set -o pipefail
           godot --headless --path black-signal-hd2d --editor --import --quit 2>&1 | tee import.log
+          python black-signal-hd2d/enable_rin_mipmaps.py
+          godot --headless --path black-signal-hd2d --editor --import --quit 2>&1 | tee import_mips.log
+          ! grep -E 'SCRIPT ERROR|Parse Error|Shader compilation failed' import_mips.log
           ! grep -E 'SCRIPT ERROR|Parse Error|Shader compilation failed' import.log
       - name: Native HD2D smoke test
         run: |
@@ -117,4 +119,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-hd2d-v0.7.5-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.5 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 742 motion-interpolated Rin frames sampled at 90 Hz, packed into bounded transparent-trimmed pages with rebuilt running, crouch walking and prone crawling, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-hd2d-v0.7.6-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.6 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 742 smoothly resampled and spatially stabilized Rin frames sampled at 90 Hz, alpha-safe mipmapped texture pages, packed into bounded transparent-trimmed pages with rebuilt running, crouch walking and prone crawling, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease

@@ -133,7 +133,9 @@ func draw_frame(canvas: CanvasItem,name: String,number: int,dst: Rect2,alpha: fl
  var cols: int=int(layout[4])
  var tile:=Vector2(float(layout[2]),float(layout[3]))
  var offset:=Vector2(float(layout[0]),float(layout[1]))
- var src:=Rect2(Vector2(float(local_index%cols),float(floori(float(local_index)/float(cols))))*tile,tile)
+ var gutter: float=float(layout[6])
+ var stride:=tile+Vector2(gutter*2.0,gutter*2.0)
+ var src:=Rect2(Vector2(float(local_index%cols),float(floori(float(local_index)/float(cols))))*stride+Vector2(gutter,gutter),tile)
  var ratio:=dst.size/Vector2(TILE_W,TILE_H)
  var region:=Rect2(dst.position+offset*ratio,tile*ratio)
  var sheet: Texture2D=SHEETS[name][page]

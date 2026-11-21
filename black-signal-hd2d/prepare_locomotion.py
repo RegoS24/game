@@ -94,7 +94,7 @@ def flow(a,b):
  # Track motion at half resolution, scale field back to full resolution.
  u=cv2.resize(gray(a),(W//2,H//2));v=cv2.resize(gray(b),(W//2,H//2))
  f=cv2.calcOpticalFlowFarneback(u,v,None,.5,4,17,5,7,1.5,0)
- return cv2.resize(f,(W,H))*2
+ return cv2.GaussianBlur(cv2.resize(f,(W,H))*2,(0,0),2.3)
 
 def remap(a,f,t):
  m=GRID-f*t
