@@ -5,7 +5,8 @@ const VERSION: int = 1
 
 static func validate(data: Variant) -> bool:
  if typeof(data)!=TYPE_DICTIONARY:return false
- if int(data.get("version",-1))!=VERSION:return false
+ if typeof(data.get("version",null))!=TYPE_INT and typeof(data.get("version",null))!=TYPE_FLOAT:return false
+ if float(data["version"])!=float(VERSION):return false
  var position: Variant=data.get("position",[])
  if typeof(position)!=TYPE_ARRAY or position.size()!=2:return false
  for coordinate in position:
@@ -20,6 +21,9 @@ static func validate(data: Variant) -> bool:
  if float(data["time"])<0.0 or float(data["time"])>86400.0:return false
  for key in ["hp","ammo","reserve","kills","phase"]:
   if typeof(data.get(key,null))!=TYPE_FLOAT and typeof(data.get(key,null))!=TYPE_INT:return false
+ for key in ["hp","ammo","reserve","kills","phase"]:
+  var value: float=float(data[key])
+  if not is_finite(value) or value!=float(int(value)):return false
  if int(data["hp"])<1 or int(data["hp"])>100:return false
  if int(data["ammo"])<0 or int(data["ammo"])>12 or int(data["reserve"])<0 or int(data["reserve"])>9999:return false
  if int(data["kills"])<0 or int(data["kills"])>6 or int(data["phase"])<0 or int(data["phase"])>2:return false
@@ -37,7 +41,8 @@ static func validate(data: Variant) -> bool:
  for i in range(6):
   var enemy: Variant=enemies[i]
   if typeof(enemy)!=TYPE_DICTIONARY:return false
-  if int(enemy.get("kind",-1))!=i:return false
+  if typeof(enemy.get("kind",null))!=TYPE_INT and typeof(enemy.get("kind",null))!=TYPE_FLOAT:return false
+  if not is_finite(float(enemy["kind"])) or float(enemy["kind"])!=float(i):return false
   var p: Variant=enemy.get("position",[])
   if typeof(p)!=TYPE_ARRAY or p.size()!=2:return false
   for coordinate in p:
@@ -45,6 +50,7 @@ static func validate(data: Variant) -> bool:
   if not is_finite(float(p[0])) or not is_finite(float(p[1])):return false
   if absf(float(p[0]))>6.0 or absf(float(p[1]))>250.0:return false
   if typeof(enemy.get("hp",null))!=TYPE_INT and typeof(enemy.get("hp",null))!=TYPE_FLOAT:return false
+  if not is_finite(float(enemy["hp"])) or float(enemy["hp"])!=float(int(enemy["hp"])):return false
   if int(enemy["hp"])<0 or int(enemy["hp"])>8:return false
   if int(enemy["hp"])==0:dead+=1
  if dead!=int(data["kills"]):return false
