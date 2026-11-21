@@ -46,6 +46,8 @@ jobs:
           printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\nexport/android/debug_keystore = "%s"\n' "$ANDROID_HOME" "$JAVA_HOME" "$HOME/.android/debug.keystore" > "$HOME/.config/godot/editor_settings-4.5.tres"
           cp "$HOME/.config/godot/editor_settings-4.5.tres" "$HOME/.config/godot/editor_settings-4.tres"
           godot --version
+      - name: Prevent multi-pose silhouette ghosting
+        run: python3 black-signal-hd2d/tests/test_pose_compositing.py
       - name: Generate and validate animation atlases
         run: |
           python -m pip install numpy pillow opencv-python-headless
