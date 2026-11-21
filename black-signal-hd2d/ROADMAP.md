@@ -19,6 +19,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-21: Removed enemy pose-to-pose alpha crossfade in `scripts/enemy.gd` (commit `987c1c5`). Rendering now uses exactly one atlas pose per frame instead of overlaying two different silhouettes, which could cause ghost limbs/shimmer on mobile. Locomotion phase carry and directional selection remain unchanged. **Source committed; CI, emulator screenshot comparison and physical Android visual validation pending.** This does not solve warped/generated source poses, Rin's animation, or all shimmer. Next: inspect emulator screenshots and replace warped source poses with authored directional animation/rig.
+
+
 - 2026-11-21: Checkpoint station IDs now reject NaN/Infinity before integer conversion; headless smoke covers non-finite, fractional and out-of-range station values. Commits d1ba096 and d7f38f9. **CI and APK validation pending**. No new art or gameplay content in this patch. Next: check CI and prioritize authored directional Rin/mob poses and visible shimmer regression review.
 
 - 2026-11-21: Checkpoint validator now rejects fractional/non-finite HP, ammunition, kill counts, mission phase, version, and enemy kind/HP rather than truncating them with `int()`. Added headless regression cases. Commits cd2ab8d and 525d1efa; GitHub Actions and APK execution **not yet verified**. Remaining blockers: validate Android lifecycle and save recovery on hardware; improve authored character poses and remove shimmering.
