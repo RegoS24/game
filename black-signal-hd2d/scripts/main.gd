@@ -4,6 +4,7 @@ const Animator = preload("res://scripts/rin_animator.gd")
 const RIN_HEIGHT: float=1.68
 const Mob = preload("res://scripts/enemy.gd")
 const Mission = preload("res://scripts/mission.gd")
+const Checkpoint = preload("res://scripts/checkpoint.gd")
 const BUILDING_FACADES: Texture2D=preload("res://assets/buildings/facades.webp")
 const Cover = preload("res://scripts/cover.gd")
 const W: float = 1280.0
@@ -20,6 +21,7 @@ const PINK = Color("f252ad")
 var anim = Animator.new()
 var mission = Mission.new()
 var mode: String = "lobby"
+var checkpoint_available: bool=false
 var loading_time: float = 0.0
 var pos: Vector2 = Vector2(0,-10)
 var yaw: float = 0.0
@@ -82,6 +84,7 @@ func _ready() -> void:
  texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
  load_aim_settings()
  mission.load_record()
+ checkpoint_available=not Checkpoint.read().is_empty()
  # Avoid allocating all enemy textures while the lobby is being loaded.
  if DisplayServer.get_name() != "headless" and OS.has_feature("mobile"):
   get_window().mode = Window.MODE_FULLSCREEN
@@ -114,6 +117,7 @@ func build_world() -> void:
   targets.append(Mob.new(i,Vector2(lane,3.5+float(i)*22.0)))
 
 func start_game() -> void:
+ Checkpoint.clear();checkpoint_available=false
  mode = "loading"; loading_time = 0.65
  pos = Vector2(0,-10); yaw = 0.0; yaw_target = 0.0; motion = Vector2.ZERO
  pitch=0.0;pitch_target=0.0;gyro_rate=Vector2.ZERO
@@ -125,6 +129,53 @@ func start_game() -> void:
  sprint_latch = false; fire_id = -1; shot_cool = 0.0; shot_flash = 0.0
  build_world(); update_camera()
  print("BLACK_SIGNAL_MOBS_READY: ",targets.size())
+
+func checkpoint_data() -> Dictionary:
+ var enemies: Array=[]
+ for mob in targets:
+  enemies.append({"kind":mob.kind,"position":[mob.p.x,mob.p.y],"hp":mob.hp})
+ var stations: Array=[]
+ for index in used_med_stations.keys():stations.append(int(index))
+ return {"version":Checkpoint.VERSION,"position":[pos.x,pos.y],"yaw":yaw,"pitch":pitch,"time":battle_time,"hp":player_hp,"ammo":ammo,"reserve":reserve,"kills":kills,"phase":mission.phase,"stations":stations,"enemies":enemies}
+
+func save_checkpoint() -> bool:
+ if mode!="game" and mode!="paused":return false
+ if player_hp<=0 or targets.size()!=ENEMY_COUNT:return false
+ var saved: bool=Checkpoint.write(checkpoint_data())
+ if saved:checkpoint_available=true
+ return saved
+
+func resume_checkpoint() -> bool:
+ var state: Dictionary=Checkpoint.read()
+ if state.is_empty():
+  checkpoint_available=false
+  return false
+ build_world()
+ pos=Vector2(float(state["position"][0]),float(state["position"][1]))
+ yaw=float(state["yaw"]);yaw_target=yaw
+ pitch=float(state["pitch"]);pitch_target=pitch
+ battle_time=float(state["time"])
+ player_hp=int(state["hp"]);ammo=int(state["ammo"]);reserve=int(state["reserve"])
+ kills=int(state["kills"]);mission.phase=int(state["phase"])
+ used_med_stations.clear()
+ for station in state["stations"]:used_med_stations[int(station)]=true
+ for i in range(ENEMY_COUNT):
+  var mob: Mob=targets[i]
+  var saved_enemy: Dictionary=state["enemies"][i]
+  mob.p=Vector2(float(saved_enemy["position"][0]),float(saved_enemy["position"][1]))
+  mob.hp=int(saved_enemy["hp"])
+  mob.activated=mob.p.distance_to(pos)<22.0
+  if mob.hp==0:
+   mob.set_clip(Mob.DEATH)
+   mob.time=float(Mob.DURATIONS[Mob.DEATH])
+  else:mob.set_clip(Mob.IDLE)
+ anim=Animator.new()
+ reload_time=0.0;shot_cool=0.0;shot_flash=0.0;player_hurt=0.0
+ shoot_hold=false;fire_id=-1;joy_id=-1;aim_id=-1;touch_joy=Vector2.ZERO;motion=Vector2.ZERO
+ sprint_latch=false;encounter_clear=false
+ begin_gyro_calibration();update_camera()
+ mode="paused";checkpoint_available=true
+ return true
 
 func load_aim_settings() -> void:
  var cfg:=ConfigFile.new()
@@ -272,6 +323,7 @@ func update_enemies(dt: float) -> void:
    elif anim.stance=="crouch" and mob.kind!=0 and mob.kind!=4:damage=maxi(1,roundi(float(damage)*0.8))
    player_hp=maxi(0,player_hp-damage);player_hurt=0.24
    if player_hp==0:
+    Checkpoint.clear();checkpoint_available=false
     shoot_hold=false;touch_joy=Vector2.ZERO;mode="defeat"
     announce("РИН ВЫВЕДЕНА ИЗ БОЯ")
     break
@@ -328,6 +380,7 @@ func interact_mission() -> void:
  if result.is_empty():return
  announce(result)
  if mission.phase==Mission.Phase.COMPLETE:
+  Checkpoint.clear();checkpoint_available=false
   encounter_clear=true;mode="victory";shoot_hold=false;touch_joy=Vector2.ZERO
   print("BLACK_SIGNAL_CHAPTER01_COMPLETE: ",mission.mission_elapsed)
 
@@ -358,6 +411,7 @@ func reload() -> void:
 func _notification(what: int) -> void:
  if what==NOTIFICATION_APPLICATION_PAUSED or what==NOTIFICATION_WM_WINDOW_FOCUS_OUT:
   if mode=="game":toggle_pause()
+  if mode=="paused":save_checkpoint()
  elif what==NOTIFICATION_APPLICATION_RESUMED:
   if mode=="paused":
    shoot_hold=false
@@ -371,6 +425,7 @@ func _notification(what: int) -> void:
 func toggle_pause() -> void:
  if mode=="game":
   mode="paused";shoot_hold=false;fire_id=-1;touch_joy=Vector2.ZERO;joy_id=-1;aim_id=-1;motion=Vector2.ZERO
+  save_checkpoint()
  elif mode=="paused":
   mode="game";begin_gyro_calibration()
 
@@ -384,11 +439,14 @@ func activate(key: String) -> void:
   "reload": reload()
   "fire": fire()
   "interact": interact_mission()
-  "back": mode="lobby"; shoot_hold=false; touch_joy=Vector2.ZERO
+  "back":
+   if mode=="game" or mode=="paused":save_checkpoint()
+   mode="lobby";shoot_hold=false;touch_joy=Vector2.ZERO
 
 func _input(event: InputEvent) -> void:
  if event is InputEventKey and event.pressed and not event.echo:
   if mode=="lobby" and event.keycode==KEY_ENTER: start_game(); return
+  if mode=="lobby" and event.keycode==KEY_R and checkpoint_available:resume_checkpoint();return
   if mode=="victory" and event.keycode==KEY_ENTER: start_game(); return
   if mode=="paused":
    if event.physical_keycode==KEY_ESCAPE or event.physical_keycode==KEY_P:toggle_pause()
@@ -423,13 +481,14 @@ func _input(event: InputEvent) -> void:
 func press_at(p: Vector2,id: int) -> void:
  if mode=="paused":
   if Rect2(460,410,360,72).has_point(p) or Rect2(action_rects["pause"]).has_point(p):toggle_pause()
-  elif Rect2(action_rects["back"]).has_point(p):mode="lobby"
+  elif Rect2(action_rects["back"]).has_point(p):save_checkpoint();mode="lobby"
   return
  if mode=="defeat" or mode=="victory":
   if Rect2(460,410,360,72).has_point(p):start_game()
   elif Rect2(16,16,115,39).has_point(p):mode="lobby"
   return
  if mode=="lobby":
+  if checkpoint_available and Rect2(945,438,310,86).has_point(p):resume_checkpoint();return
   if Rect2(945,540,310,92).has_point(p): start_game()
   return
  if mode!="game": return
@@ -612,7 +671,8 @@ func _draw() -> void:
   draw_texture_rect(LOBBY,Rect2(0,0,W,H),false)
   panel(Rect2(0,0,W,H),Color(0.015,0.02,0.06,0.25),Color.TRANSPARENT)
   panel(Rect2(925,478,345,190));text_at(Vector2(949,510),"СЕКТОР 07 • ТРЕНИРОВКА",20,GOLD);text_at(Vector2(950,534),"Одиночный / камера TPP • 2D",15,CYAN)
-  button(Rect2(945,540,310,92),"НАЧАТЬ",true)
+  if checkpoint_available:button(Rect2(945,438,310,86),"ПРОДОЛЖИТЬ",true)
+  button(Rect2(945,540,310,92),"НАЧАТЬ ЗАНОВО",true)
   panel(Rect2(18,610,410,74));text_at(Vector2(32,637),"BLACK SIGNAL / HD2D",20,GOLD);text_at(Vector2(32,662),"Глава 01 • Сигнал и эвакуация",15)
   if mission.best_seconds>=0:text_at(Vector2(32,594),"Рекорд прохождения: %.1f с"%mission.best_seconds,15,CYAN)
   return
@@ -877,6 +937,16 @@ func run_smoke() -> void:
  assert(mode=="paused")
  toggle_pause()
  print("BLACK_SIGNAL_ANDROID_LIFECYCLE_OK: background/focus loss pauses; no auto-resume")
+ var probe: Dictionary=checkpoint_data()
+ assert(Checkpoint.validate(probe))
+ var probe_path: String="user://checkpoint_smoke.json"
+ assert(Checkpoint.write(probe,probe_path))
+ assert(Checkpoint.read(probe_path)==probe)
+ probe["hp"]=0
+ assert(not Checkpoint.validate(probe))
+ Checkpoint.clear(probe_path)
+ assert(Checkpoint.read(probe_path).is_empty())
+ print("BLACK_SIGNAL_CHECKPOINT_SMOKE_OK: roundtrip, invalid HP, cleanup")
  # Objective tests must not modify player records in user://.
  var quest=Mission.new()
  quest.begin()
