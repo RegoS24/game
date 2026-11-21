@@ -33,3 +33,5 @@ Status: planning baseline (2026-11-21). AAA is an aspiration, not a verified qua
 ## Progress log
 - 2026-11-21: Implemented field medical stations and medical smoke test; CI workflow now requires `BLACK_SIGNAL_MEDICAL_SMOKE_OK`. Await CI evidence before claiming APK validation.
 - 2026-11-21: Created quality-gated roadmap. This documentation change is **not** a gameplay fix, APK build, or visual validation.
+
+- 2026-11-21 (CI recovery): Run #38 (commit 89adc46) failed at **Native HD2D smoke test**, before Android export. No new APK can be claimed from it. Checkpoint regression now reports write/read failures and identifies the exact mismatched field; comparison normalizes JSON numeric types. Fixes: 031232d, b286a7c. **Pending**: confirm the next workflow reaches export and emulator; inspect smoke logs if it fails. Last published confirmed development APK remains #34. This is a test-diagnostics increment, not proof of restored save/load or improved art.
