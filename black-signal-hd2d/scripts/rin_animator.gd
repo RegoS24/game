@@ -121,9 +121,10 @@ func advance_gait(dt: float) -> void:
  frame=fposmod(frame+dt*rate,float(COUNT[clip]))
 func paint(canvas: CanvasItem, at: Vector2, scale_factor: float, extra: Vector2=Vector2.ZERO) -> void:
  var dst:=Rect2(at-Vector2(96,224)*scale_factor+extra-Vector2(0,jump_lift()),Vector2(192,256)*scale_factor)
- var a:float=mix*mix*(3.0-2.0*mix)
- if a<1.0: draw_frame(canvas,previous_clip,index_for(previous_clip,previous_frame),dst,1.0-a)
- draw_frame(canvas,clip,frame_index(),dst,a)
+ # Draw one silhouette per frame. Alpha blending different poses creates
+ # doubled limbs and temporal shimmer on small Android screens.
+ # Preserve the existing phase transfer in set_clip(), but never overlay poses.
+ draw_frame(canvas,clip,frame_index(),dst,1.0)
 func draw_frame(canvas: CanvasItem,name: String,number: int,dst: Rect2,alpha: float) -> void:
  # Packed pages retain the original 384×512 coordinate system and feet anchor.
  var layout: Array=LAYOUT[name]
