@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-21: Rin sprite renderer now draws one fully opaque animation pose per frame, eliminating simultaneous previous/current-pose silhouettes at clip boundaries (commit b088bfc). Added static regression test for Rin/enemy pose compositing and wired it to every Android workflow push (commits 0d14c67, cbede7e). **Source change only: CI execution, emulator visual comparison, and physical Android verification still pending.** This does not repair warped source poses, missing directional Rin artwork, or footfall quality. Next: verify CI, review captured gameplay frames and replace warped source animations with authored directional poses/2D rig.
+
 - 2026-11-21: Removed enemy pose-to-pose alpha crossfade in `scripts/enemy.gd` (commit `987c1c5`). Rendering now uses exactly one atlas pose per frame instead of overlaying two different silhouettes, which could cause ghost limbs/shimmer on mobile. Locomotion phase carry and directional selection remain unchanged. **Source committed; CI, emulator screenshot comparison and physical Android visual validation pending.** This does not solve warped/generated source poses, Rin's animation, or all shimmer. Next: inspect emulator screenshots and replace warped source poses with authored directional animation/rig.
 
 
