@@ -34,20 +34,33 @@ def audit(name):
             frames.append({"index": i, "bounds": list(box),
                            "center": [(left + right) / 2, (top + bottom) / 2],
                            "area": (right - left) * (bottom - top)})
-    jumps = []
-    for i in range(1, len(frames)):
-        a, b = frames[i - 1], frames[i]
-        jumps.append({"from": i - 1, "to": i,
-                      "center_delta": round(sum((a["center"][k] - b["center"][k]) ** 2
-                                                for k in range(2)) ** .5, 2),
-                      "area_ratio": round(max(a["area"], b["area"]) /
-                                          min(a["area"], b["area"]), 3)})
+    jumps = measure_clip_jumps(frames)
     return {"frames_checked": len(frames),
             "largest_center_jumps": sorted(jumps, key=lambda j: j["center_delta"],
                                            reverse=True)[:10],
             "largest_area_changes": sorted(jumps, key=lambda j: j["area_ratio"],
                                             reverse=True)[:10],
-            "note": "Adjacent atlas slots can cross clip/direction boundaries; review flagged pairs manually."}
+            "note": "Only compare adjacent frames within each 8-frame atlas row; row boundaries are excluded. Loop closure is reported separately.",
+            "largest_loop_closure_jumps": sorted(measure_clip_jumps(frames, loop_only=True), key=lambda j: j["center_delta"], reverse=True)[:10]}
+
+
+def measure_clip_jumps(frames, loop_only=False):
+    """Measure one 8-frame row at a time; never compare unrelated clip rows."""
+    if len(frames) % COLS:
+        raise ValueError("frame count must be divisible by clip length")
+    jumps = []
+    for start in range(0, len(frames), COLS):
+        pairs = [(start + COLS - 1, start)] if loop_only else [
+            (i - 1, i) for i in range(start + 1, start + COLS)
+        ]
+        for left, right in pairs:
+            a, b = frames[left], frames[right]
+            jumps.append({"from": left, "to": right, "row": start // COLS,
+                          "center_delta": round(sum((a["center"][k] - b["center"][k]) ** 2
+                                                    for k in range(2)) ** .5, 2),
+                          "area_ratio": round(max(a["area"], b["area"]) /
+                                              min(a["area"], b["area"]), 3)})
+    return jumps
 
 
 def main():
