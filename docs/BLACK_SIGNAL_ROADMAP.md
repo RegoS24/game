@@ -25,5 +25,11 @@ Status: planning baseline (2026-11-21). AAA is an aspiration, not a verified qua
 - CI build/APK status and on-device test evidence not yet established.
 - User-reported: sideways mobs, enemies moving away from player, aim unable to pitch down, low-detail character rendering, unnatural 2D motion/shimmer.
 
+## Verified baseline and current blockers (2026-11-21)
+- Last completed baseline CI run #30 passed Godot import, headless smoke, APK signing/export and Android emulator launch; APK is a **development build**, not release-quality validation.
+- Current iteration adds three explicit, single-use medical stations (35 HP each, capped at 100) with an interaction prompt, consumed state and restart reset. Headless regression is now required by CI; pending result is **not yet verified**.
+- Open: visual art fidelity, source-authored animation/rig and shimmer, physical-device controls and performance, richer level design and narrative, accessible HUD and campaign save slots.
+
 ## Progress log
+- 2026-11-21: Implemented field medical stations and medical smoke test; CI workflow now requires `BLACK_SIGNAL_MEDICAL_SMOKE_OK`. Await CI evidence before claiming APK validation.
 - 2026-11-21: Created quality-gated roadmap. This documentation change is **not** a gameplay fix, APK build, or visual validation.
