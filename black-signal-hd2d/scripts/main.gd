@@ -948,13 +948,13 @@ func run_smoke() -> void:
  if restored_probe.is_empty():
   push_error("CHECKPOINT_SMOKE: read or validation failed after write")
  assert(not restored_probe.is_empty())
- # JSON normalizes numeric types (integers/floats). Compare serialized values,
- # not Variant Dictionary identity or ordering.
+ # Roundtrip comparisons must normalize numeric Variant types through JSON.
+ var normalized_probe: Variant=JSON.parse_string(JSON.stringify(probe))
  var checkpoint_fields: Array[String]=["version","position","yaw","pitch","time","hp","ammo","reserve","kills","phase","stations","enemies"]
  for field in checkpoint_fields:
-  if JSON.stringify(restored_probe.get(field))!=JSON.stringify(probe.get(field)):
-   push_error("CHECKPOINT_SMOKE: mismatch in "+field+" saved="+JSON.stringify(probe.get(field))+" restored="+JSON.stringify(restored_probe.get(field)))
-  assert(JSON.stringify(restored_probe.get(field))==JSON.stringify(probe.get(field)))
+  if restored_probe.get(field)!=normalized_probe.get(field):
+   push_error("CHECKPOINT_SMOKE: mismatch in "+field+" saved="+JSON.stringify(normalized_probe.get(field))+" restored="+JSON.stringify(restored_probe.get(field)))
+  assert(restored_probe.get(field)==normalized_probe.get(field))
  probe["hp"]=0
  assert(not Checkpoint.validate(probe))
  Checkpoint.clear(probe_path)
