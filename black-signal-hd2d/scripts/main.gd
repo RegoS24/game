@@ -61,6 +61,10 @@ var kills: int = 0
 var world: Array[Dictionary] = []
 var cover_rects: Array[Rect2] = []
 var targets: Array[Mob] = []
+const MED_STATIONS: Array[Vector2]=[Vector2(-4.3,23.0),Vector2(4.3,74.0),Vector2(-4.3,119.0)]
+const MED_RANGE: float=2.1
+const MED_HEAL: int=35
+var used_med_stations: Dictionary={}
 var player_hp: int = 100
 var player_hurt: float = 0.0
 var encounter_clear: bool = false
@@ -86,7 +90,7 @@ func _ready() -> void:
   run_smoke.call_deferred()
 
 func build_world() -> void:
- world.clear(); targets.clear(); cover_rects.clear()
+ world.clear(); targets.clear(); cover_rects.clear(); used_med_stations.clear()
  for z in range(-4,13):
   for x in [-1,1]:
    var zz: float = float(z)*19.0+float(x)*1.7
@@ -103,6 +107,8 @@ func build_world() -> void:
   world.append({"p":spot,"kind":"crate","height":1.6,"width":1.8,"side":0,"id":100+i})
   cover_rects.append(Rect2(spot-Vector2(.9,.7),Vector2(1.8,1.4)))
  # Six separate encounters spaced along the avenue. All six use original illustrated atlases.
+ for i in range(MED_STATIONS.size()):
+  world.append({"p":MED_STATIONS[i],"kind":"med_station","id":i})
  for i in range(ENEMY_COUNT):
   var lane: float=-0.58 if i==0 else (-3.5 if i%2==0 else 3.5)
   targets.append(Mob.new(i,Vector2(lane,3.5+float(i)*22.0)))
@@ -301,8 +307,23 @@ func fire() -> void:
   else:announce("ПОПАДАНИЕ")
  if ammo == 0: reload()
 
+func nearest_med_station() -> int:
+ if player_hp<=0 or player_hp>=100:return -1
+ for i in range(MED_STATIONS.size()):
+  if not used_med_stations.has(i) and pos.distance_to(MED_STATIONS[i])<=MED_RANGE:return i
+ return -1
+
+func use_med_station() -> bool:
+ var index: int=nearest_med_station()
+ if index<0:return false
+ used_med_stations[index]=true
+ player_hp=mini(100,player_hp+MED_HEAL)
+ announce("АПТЕЧКА +%d HP"%MED_HEAL)
+ return true
+
 func interact_mission() -> void:
  if mode!="game" or player_hp<=0:return
+ if not mission.in_range(pos) and use_med_station():return
  var result: String=mission.interact(pos,kills,battle_time)
  if result.is_empty():return
  announce(result)
@@ -528,6 +549,14 @@ func draw_prop(o: Dictionary, dep: float) -> void:
   draw_rect(r,Color("364350"));draw_rect(r,Color("141d2b"),false,maxf(1.0,scale_factor*.07))
   draw_line(r.position,r.end,Color("69788a"),maxf(1.0,scale_factor*.05))
   draw_line(r.position+Vector2(0,r.size.y),r.position+Vector2(r.size.x,0),Color("8c9eb1"),maxf(1.0,scale_factor*.05))
+ elif kind=="med_station":
+  var consumed: bool=used_med_stations.has(int(o["id"]))
+  var med_color: Color=Color("4b6570") if consumed else Color("56e8aa")
+  var med_rect:=Rect2(p-Vector2(0.36,0.95)*scale_factor,Vector2(0.72,0.95)*scale_factor)
+  draw_rect(med_rect,Color("132b33"))
+  draw_rect(med_rect,med_color,false,maxf(1.0,scale_factor*.05))
+  draw_line(med_rect.get_center()+Vector2(-0.18,0),med_rect.get_center()+Vector2(0.18,0),med_color,maxf(2.0,scale_factor*.09))
+  draw_line(med_rect.get_center()+Vector2(0,-0.18),med_rect.get_center()+Vector2(0,0.18),med_color,maxf(2.0,scale_factor*.09))
  elif kind=="mission":
   var scan: bool=mission.phase==Mission.Phase.SCAN
   var glow: Color=CYAN if scan else GOLD
@@ -625,6 +654,7 @@ func draw_hud() -> void:
   draw_circle(Vector2(1181+waypoint.x*3,clampf(136-(waypoint.y-pos.y)*.7,48,135)),6,GOLD)
  draw_circle(JOY,80,Color(0.01,0.04,0.07,0.45));draw_arc(JOY,80,0,TAU,72,Color(0.85,0.9,1,.52),2,true);draw_circle(JOY+Vector2(touch_joy.x,-touch_joy.y)*55,35,Color(0.52,0.62,0.72,0.46));draw_arc(JOY+Vector2(touch_joy.x,-touch_joy.y)*55,35,0,TAU,48,Color(0.87,0.91,1,.5),1.4,true)
  if mission.in_range(pos):button(action_rects["interact"],"ВЗАИМОДЕЙСТВ.",true)
+ elif nearest_med_station()>=0:button(action_rects["interact"],"ЛЕЧЕНИЕ +35",true)
  button(action_rects["fire"],"ОГОНЬ",shoot_hold);button(action_rects["reload"],"ПЕРЕЗАР.",reload_time>0);button(action_rects["jump"],"ПРЫЖОК",anim.jumping);button(action_rects["crouch"],"ПРИСЕСТЬ",anim.target_stance=="crouch");button(action_rects["prone"],"ЛЕЧЬ",anim.target_stance=="prone");button(action_rects["sprint"],"БЕГ",sprint_latch)
  panel(Rect2(430,595,425,95));text_at(Vector2(449,621),"K-9   /   "+anim.state_label(),17,GOLD);text_at(Vector2(449,654),"%02d  /  %d"%[ammo,reserve],28);draw_rect(Rect2(449,669,386,6),Color("392334"));draw_rect(Rect2(449,669,386*float(player_hp)/100.0,6),CYAN if player_hp>30 else PINK);text_at(Vector2(700,653),str(player_hp)+" HP",16,CYAN)
  if reload_time>0: draw_rect(Rect2(449,680,386*(1-reload_time/1.5),4),GOLD)
@@ -787,6 +817,18 @@ func run_smoke() -> void:
  var free_end: Vector2=Cover.move_circle(blocked_start,Vector2(-0.25,0.0),0.31,movement_wall)
  assert(free_end.distance_to(blocked_start)>0.20)
  print("BLACK_SIGNAL_MOVEMENT_SMOKE_OK: blocked footfalls and free movement")
+ # Medical stations: one use, capped health, no waste at full health, reset per run.
+ assert(MED_STATIONS.size()==3)
+ pos=MED_STATIONS[0];player_hp=55
+ assert(nearest_med_station()==0 and use_med_station() and player_hp==90)
+ assert(not use_med_station() and used_med_stations.size()==1)
+ pos=MED_STATIONS[1];player_hp=90
+ assert(use_med_station() and player_hp==100)
+ pos=MED_STATIONS[2];assert(nearest_med_station()==-1)
+ player_hp=50;assert(use_med_station() and player_hp==85)
+ start_game();mode="game"
+ assert(used_med_stations.is_empty() and player_hp==100)
+ print("BLACK_SIGNAL_MEDICAL_SMOKE_OK: proximity, single use, HP cap and run reset")
  # Pause must freeze the combat state and clear held touch controls.
  mode="game";touch_joy=Vector2(0.8,0.2);shoot_hold=true;fire_id=2;joy_id=1;aim_id=3;motion=Vector2(1,0)
  var pause_hp: int=player_hp
