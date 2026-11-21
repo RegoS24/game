@@ -10,11 +10,13 @@ static func validate(data: Variant) -> bool:
  if typeof(position)!=TYPE_ARRAY or position.size()!=2:return false
  for coordinate in position:
   if typeof(coordinate)!=TYPE_FLOAT and typeof(coordinate)!=TYPE_INT:return false
+ if not is_finite(float(position[0])) or not is_finite(float(position[1])):return false
  if absf(float(position[0]))>5.9 or float(position[1])< -65.0 or float(position[1])>215.0:return false
  for key in ["yaw","pitch","time"]:
   var n: Variant=data.get(key,null)
   if typeof(n)!=TYPE_FLOAT and typeof(n)!=TYPE_INT:return false
  if absf(float(data["yaw"]))>100000.0 or float(data["pitch"])< -0.36 or float(data["pitch"])>0.62:return false
+ if not is_finite(float(data["yaw"])) or not is_finite(float(data["pitch"])) or not is_finite(float(data["time"])):return false
  if float(data["time"])<0.0 or float(data["time"])>86400.0:return false
  for key in ["hp","ammo","reserve","kills","phase"]:
   if typeof(data.get(key,null))!=TYPE_FLOAT and typeof(data.get(key,null))!=TYPE_INT:return false
@@ -23,9 +25,12 @@ static func validate(data: Variant) -> bool:
  if int(data["kills"])<0 or int(data["kills"])>6 or int(data["phase"])<0 or int(data["phase"])>2:return false
  var stations: Variant=data.get("stations",[])
  if typeof(stations)!=TYPE_ARRAY or stations.size()>3:return false
+ var unique_stations: Dictionary={}
  for station in stations:
   if typeof(station)!=TYPE_INT and typeof(station)!=TYPE_FLOAT:return false
-  if int(station)<0 or int(station)>2:return false
+  if int(station)<0 or int(station)>2 or float(station)!=float(int(station)):return false
+  if unique_stations.has(int(station)):return false
+  unique_stations[int(station)]=true
  var enemies: Variant=data.get("enemies",[])
  if typeof(enemies)!=TYPE_ARRAY or enemies.size()!=6:return false
  var dead: int=0
@@ -37,6 +42,7 @@ static func validate(data: Variant) -> bool:
   if typeof(p)!=TYPE_ARRAY or p.size()!=2:return false
   for coordinate in p:
    if typeof(coordinate)!=TYPE_FLOAT and typeof(coordinate)!=TYPE_INT:return false
+  if not is_finite(float(p[0])) or not is_finite(float(p[1])):return false
   if absf(float(p[0]))>6.0 or absf(float(p[1]))>250.0:return false
   if typeof(enemy.get("hp",null))!=TYPE_INT and typeof(enemy.get("hp",null))!=TYPE_FLOAT:return false
   if int(enemy["hp"])<0 or int(enemy["hp"])>8:return false
