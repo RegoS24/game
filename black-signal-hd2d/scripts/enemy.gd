@@ -123,7 +123,11 @@ func update(dt: float, player: Vector2, player_alive: bool, obstacles: Array[Rec
    # Patrol in depth rather than sideways; turn toward player when aggroed.
    if absf(p.y-spawn.y)>1.0:patrol_direction=-signf(p.y-spawn.y)
    heading=Vector2(0,patrol_direction)
-   set_clip(WALK);p.y+=patrol_direction*float(STATS[kind][1])*0.24*dt
+   set_clip(WALK)
+   var patrol_step: Vector2=heading*float(STATS[kind][1])*0.24*dt
+   var patrol_next: Vector2=Cover.move_circle(p,patrol_step,radius(),obstacles)
+   if patrol_next.distance_squared_to(p)>0.0000001:p=patrol_next
+   else:set_clip(IDLE)
   else:set_clip(IDLE)
  elif distance<=reach and cool<=0.0 and not blocked:
   if distance>0.01:heading=rel.normalized()
