@@ -23,3 +23,5 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - v0.8.1: actual world-coordinate cover collisions, cover-aware hitscan and enemy obstacle flanking; awaiting device evaluation.
 
 - 2026-11-21: enemy sentry patrol now uses the same swept circle/cover movement as pursuit (previously modified `p.y` directly and could pass through crates). Added headless assertions for patrol cover separation, pursuit distance reduction, and facing toward player. CI pending at time of update; physical-device visual review and authored directional animation remain blockers.
+
+- 2026-11-21: Rin locomotion footfall phase now uses collision-resolved world displacement instead of unimpeded requested velocity; blocked movement no longer drives walk/run animation. Added smoke assertions for blocked versus free cover movement. GitHub Actions and Android device verification pending; this does not replace authored directional pose/rig work.
