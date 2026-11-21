@@ -75,6 +75,7 @@ jobs:
           grep -q BLACK_SIGNAL_MISSION_SMOKE_OK smoke.log
           grep -q BLACK_SIGNAL_COVER_SMOKE_OK smoke.log
           grep -q BLACK_SIGNAL_PAUSE_SMOKE_OK smoke.log
+          grep -q BLACK_SIGNAL_CHECKPOINT_SMOKE_OK smoke.log
           grep -q BLACK_SIGNAL_MEDICAL_SMOKE_OK smoke.log
           grep -q BLACK_SIGNAL_BUILDING_SMOKE_OK smoke.log
           ! grep -E 'SCRIPT ERROR|Parse Error|Invalid polygon data' smoke.log
