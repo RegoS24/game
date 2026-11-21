@@ -27,3 +27,5 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - 2026-11-21: Rin locomotion footfall phase now uses collision-resolved world displacement instead of unimpeded requested velocity; blocked movement no longer drives walk/run animation. Added smoke assertions for blocked versus free cover movement. GitHub Actions and Android device verification pending; this does not replace authored directional pose/rig work.
 
 - 2026-11-21: enemy WALK/RUN animation phase now scales with actual collision-resolved displacement, and enemies switch to IDLE when blocked; addresses running-in-place and foot sliding at crates. Source patch committed; headless Godot, CI and physical Android visual review not yet verified. Authored directional pose/rig replacement remains the priority.
+
+- v0.9.0: Six procedural illustrated cyberpunk building families with four directional views each, embedded into 2.5D city rendering and exported APK. These are newly generated game textures based on visual references; image-generation turnarounds have not been packaged verbatim. No physically-based 3D materials or real building mesh geometry yet.

@@ -4,6 +4,7 @@ const Animator = preload("res://scripts/rin_animator.gd")
 const RIN_HEIGHT: float=1.68
 const Mob = preload("res://scripts/enemy.gd")
 const Mission = preload("res://scripts/mission.gd")
+const BUILDING_FACADES: Texture2D=preload("res://assets/buildings/facades.webp")
 const Cover = preload("res://scripts/cover.gd")
 const W: float = 1280.0
 const H: float = 720.0
@@ -89,7 +90,7 @@ func build_world() -> void:
  for z in range(-4,13):
   for x in [-1,1]:
    var zz: float = float(z)*19.0+float(x)*1.7
-   world.append({"p":Vector2(float(x)*12.5,zz),"kind":"building","height":float(12+(abs(z*13+x*7)%9)),"side":x,"id":z})
+   world.append({"p":Vector2(float(x)*12.5,zz),"kind":"building","height":float(12+(abs(z*13+x*7)%9)),"side":x,"id":z,"style":posmod(abs(z*7+x*3),6)})
    world.append({"p":Vector2(float(x)*6.8,zz+5.0),"kind":"light","height":5.2,"side":x,"id":z})
    if z%2 == 0:
     var side_crate: Vector2=Vector2(float(x)*5.2,zz+9.0)
@@ -488,20 +489,19 @@ func draw_prop(o: Dictionary, dep: float) -> void:
  var p: Vector2=project(o["p"]); var scale_factor: float=F/dep; var kind: String=o["kind"]
  if p.x<-2000 or p.x>W+2000: return
  if kind=="building":
-  var h: float=float(o["height"])*scale_factor; var w: float=13.5*scale_factor
-  var r := Rect2(p-Vector2(w*.5,h),Vector2(w,h)); var accent: Color=PINK if int(o["id"])%3==0 else CYAN
-  draw_rect(r,Color("1d2332")); draw_rect(r,Color("090e1d"),false,maxf(1.0,scale_factor*.13))
-  draw_rect(Rect2(r.position,Vector2(w*.11,h)),Color("111727")); draw_rect(Rect2(r.position+Vector2(w*.82,0),Vector2(w*.18,h)),Color("121a26"))
-  if r.end.x<0.0 or r.position.x>W or r.end.y<0.0 or r.position.y>H: return
-  var rows:int=mini(12,int(float(o["height"])/1.5)) if scale_factor>9.0 else mini(4,int(float(o["height"])/3.0))
-  for k in range(rows):
-   for j in range(4):
-    var q:=Rect2(r.position+Vector2(w*.18+float(j)*w*.15,h*.05+float(k)*h*.073),Vector2(w*.095,h*.042))
-    draw_rect(q,Color("c87f70") if (j+k+int(o["id"]))%4==0 else Color("233e56"))
-  draw_rect(Rect2(r.position+Vector2(w*.12,h*.74),Vector2(w*.68,h*.075)),Color("111424")); draw_rect(Rect2(r.position+Vector2(w*.12,h*.74),Vector2(w*.68,h*.075)),accent,false,maxf(1,scale_factor*.08))
-  if scale_factor>12:
-   text_at(r.position+Vector2(w*.16,h*.797),"LOTOS" if int(o["id"])%3==0 else "SECTOR 07",clampi(int(scale_factor*.32),9,38),accent)
-  draw_rect(Rect2(r.position+Vector2(w*.2,h*.86),Vector2(w*.50,h*.14)),Color("101725")); draw_line(r.position+Vector2(w*.2,h*.86),r.position+Vector2(w*.7,h*.86),accent,maxf(1,scale_factor*.06))
+  # 24 authored-like original procedural facade textures (6 archetypes x 4 views).
+  # The game is still a 2.5D CanvasItem renderer, not a mesh-based 3D world.
+  var building_h: float=float(o["height"])*scale_factor
+  var building_w: float=13.5*scale_factor
+  var dest:=Rect2(p-Vector2(building_w*.5,building_h),Vector2(building_w,building_h))
+  if dest.end.x<0.0 or dest.position.x>W or dest.end.y<0.0 or dest.position.y>H:return
+  var facade_dir: Vector2=Vector2(-float(o["side"]),0.0)
+  var to_eye: Vector2=pos-Vector2(o["p"])
+  var facing: float=facade_dir.dot(to_eye.normalized()) if to_eye.length_squared()>0.0001 else 1.0
+  var view: int=0 if facing>0.36 else (2 if facing< -0.50 else (1 if to_eye.y>0 else 3))
+  var style: int=int(o["style"])
+  var source:=Rect2(Vector2(float(view)*256.0,float(style)*384.0),Vector2(256.0,384.0))
+  draw_texture_rect_region(BUILDING_FACADES,dest,source)
  elif kind=="light":
   var end:Vector2=p-Vector2(0,5.2*scale_factor)
   draw_line(p,end,Color("151c27"),maxf(1,scale_factor*.12)); draw_line(end,end+Vector2(-float(o["side"])*.9*scale_factor,0),CYAN,maxf(1,scale_factor*.1))
@@ -686,6 +686,12 @@ func run_smoke() -> void:
  anim.request_prone()
  for i in range(180): anim.tick(.016,0,false)
  assert(anim.stance=="stand" and anim.clip=="idle")
+ assert(BUILDING_FACADES.get_width()==1024 and BUILDING_FACADES.get_height()==2304)
+ var types: Dictionary={}
+ for o in world:
+  if o["kind"]=="building":types[int(o["style"])]=true
+ assert(types.size()==6)
+ print("BLACK_SIGNAL_BUILDING_SMOKE_OK: six facade styles, four directional views")
  assert(targets.size()==ENEMY_COUNT)
  assert(cover_rects.size()>5)
  for unit in targets:
