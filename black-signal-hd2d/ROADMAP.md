@@ -18,6 +18,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Persist verified changes in the repository and report clear limitations.
 
 ## History
+
+- 2026-11-21: Android lifecycle safety: when the app backgrounds or the window loses focus, combat enters manual-resume pause and held touch/fire inputs clear; foreground return recalibrates gyro but does not auto-resume. Headless smoke now checks no HP/ammo/position/timer changes while suspended. Commit 4dec576; new CI result pending. Device lifecycle behavior still requires real-device validation.
+
 - 2026-11-21: Added explicit in-game pause/resume control (touch and P/Escape), overlay, held-input reset, gyro recalibration on resume and headless regression asserting HP, ammo, position and mission timer remain unchanged while paused. CI and Android emulator verification pending. This is not a save/resume-from-disk feature.
 
 - v0.7.6: raster stability work, signed APK with emulator smoke, user dissatisfaction with animation unresolved.
