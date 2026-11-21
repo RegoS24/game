@@ -502,10 +502,10 @@ func draw_prop(o: Dictionary, dep: float) -> void:
   var rect:=Rect2(p-Vector2(pw*.5,ph),Vector2(pw,ph))
   draw_rect(rect,Color(0.02,0.10,0.16,0.87))
   draw_rect(rect,glow,false,maxf(1.0,scale_factor*.06))
-  var signal: Vector2=p-Vector2(0,ph*1.30)
-  draw_circle(signal,clampf(scale_factor*.26,3.0,30.0),Color(glow.r,glow.g,glow.b,.32))
-  draw_arc(signal,clampf(scale_factor*.20,2.0,22.0),0.0,TAU,24,glow,2.0,true)
-  if scale_factor>8.0:text_at(signal+Vector2(-64,-17),"ТЕРМИНАЛ" if scan else "ЭВАКУАЦИЯ",14,glow)
+  var beacon_pt: Vector2=p-Vector2(0,ph*1.30)
+  draw_circle(beacon_pt,clampf(scale_factor*.26,3.0,30.0),Color(glow.r,glow.g,glow.b,.32))
+  draw_arc(beacon_pt,clampf(scale_factor*.20,2.0,22.0),0.0,TAU,24,glow,2.0,true)
+  if scale_factor>8.0:text_at(beacon_pt+Vector2(-64,-17),"ТЕРМИНАЛ" if scan else "ЭВАКУАЦИЯ",14,glow)
  elif kind=="mob":
   draw_enemy(o["mob"],p,scale_factor)
 
