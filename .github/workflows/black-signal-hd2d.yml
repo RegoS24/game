@@ -53,6 +53,8 @@ jobs:
       - name: Generate and validate animation atlases
         run: |
           python -m pip install numpy pillow opencv-python-headless
+          python black-signal-hd2d/tests/test_mob_motion_metrics.py | tee /tmp/motion_metrics.log
+          grep -q BLACK_SIGNAL_MOB_MOTION_METRICS_OK /tmp/motion_metrics.log
           python black-signal-hd2d/prepare_buildings.py | tee /tmp/buildings.log
           grep -q "BLACK_SIGNAL_BUILDINGS_READY 6 4" /tmp/buildings.log
           python black-signal-hd2d/prepare_atlases.py | tee /tmp/rin_stable.log
