@@ -708,7 +708,7 @@ func run_smoke() -> void:
  var patrol: Mob=Mob.new(0,Vector2(0,0))
  patrol.activated=false
  patrol.age=0.0
- var patrol_block: Array[Rect2]=[Rect2(Vector2(-1,-0.9),Vector2(2,0.5))]
+ var patrol_block: Array[Rect2]=[Rect2(Vector2(-1,0.4),Vector2(2,0.5))]
  for step in range(90):
   patrol.update(.016,Vector2(0,50),true,patrol_block)
   assert(not Cover.circle_overlaps(patrol.p,patrol.radius(),patrol_block))
