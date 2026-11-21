@@ -352,6 +352,22 @@ func aim_target() -> int:
 func reload() -> void:
  if ammo<12 and reserve>0 and reload_time<=0: reload_time=1.5
 
+
+# Android may suspend the process while the player is holding FIRE or moving.
+# Pause immediately on focus loss/backgrounding; never resume combat automatically.
+func _notification(what: int) -> void:
+ if what==NOTIFICATION_APPLICATION_PAUSED or what==NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+  if mode=="game":toggle_pause()
+ elif what==NOTIFICATION_APPLICATION_RESUMED:
+  if mode=="paused":
+   shoot_hold=false
+   fire_id=-1
+   joy_id=-1
+   aim_id=-1
+   touch_joy=Vector2.ZERO
+   motion=Vector2.ZERO
+   begin_gyro_calibration()
+
 func toggle_pause() -> void:
  if mode=="game":
   mode="paused";shoot_hold=false;fire_id=-1;touch_joy=Vector2.ZERO;joy_id=-1;aim_id=-1;motion=Vector2.ZERO
@@ -843,6 +859,24 @@ func run_smoke() -> void:
  toggle_pause()
  assert(mode=="game" and gyro_calibration>0.0)
  print("BLACK_SIGNAL_PAUSE_SMOKE_OK: gameplay frozen, touch reset, resume recalibrates gyro")
+ # Android backgrounding must freeze gameplay and require explicit resume.
+ touch_joy=Vector2(0.7,0.4);shoot_hold=true;fire_id=7;joy_id=8;aim_id=9
+ var background_hp: int=player_hp
+ var background_ammo: int=ammo
+ var background_pos: Vector2=pos
+ var background_time: float=battle_time
+ _notification(NOTIFICATION_APPLICATION_PAUSED)
+ assert(mode=="paused" and not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)
+ _process(0.2)
+ assert(player_hp==background_hp and ammo==background_ammo and pos==background_pos and battle_time==background_time)
+ _notification(NOTIFICATION_APPLICATION_RESUMED)
+ assert(mode=="paused" and gyro_calibration>0.0)
+ toggle_pause()
+ assert(mode=="game")
+ _notification(NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+ assert(mode=="paused")
+ toggle_pause()
+ print("BLACK_SIGNAL_ANDROID_LIFECYCLE_OK: background/focus loss pauses; no auto-resume")
  # Objective tests must not modify player records in user://.
  var quest=Mission.new()
  quest.begin()
