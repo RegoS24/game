@@ -70,6 +70,7 @@ jobs:
           timeout 120 godot --headless --path black-signal-hd2d -- --smoke 2>&1 | tee smoke.log
           grep -q BLACK_SIGNAL_SMOKE_OK smoke.log
           grep -q RIN90_CADENCE_OK smoke.log
+          grep -q BLACK_SIGNAL_MISSION_SMOKE_OK smoke.log
           ! grep -E 'SCRIPT ERROR|Parse Error|Invalid polygon data' smoke.log
       - name: Export native Android APK
         run: |
@@ -119,4 +120,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "black-signal-hd2d-v0.7.6-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.7.6 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 742 smoothly resampled and spatially stabilized Rin frames sampled at 90 Hz, alpha-safe mipmapped texture pages, packed into bounded transparent-trimmed pages with rebuilt running, crouch walking and prone crawling, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming and configurable gyroscope. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease
+          gh release create "black-signal-hd2d-v0.8.0-${GITHUB_RUN_NUMBER}" dist/BLACK-SIGNAL-HD2D.apk --target "$GITHUB_SHA" --title "BLACK SIGNAL HD2D — v0.8.0 (${GITHUB_RUN_NUMBER})" --notes "Native Godot 2D training scene with rear-view Rin, 742 smoothly resampled and spatially stabilized Rin frames sampled at 90 Hz, alpha-safe mipmapped texture pages, packed into bounded transparent-trimmed pages with rebuilt running, crouch walking and prone crawling, reversible stances, six enemies with new frontal attacks and meter-scaled bodies, front/rear/side atlas selection, vertical aiming, configurable gyroscope, Chapter 01 scan/combat/extraction and saved best run. Headless and Android emulator launch tests passed. Physical device playability and AAA graphics are not yet verified." --prerelease

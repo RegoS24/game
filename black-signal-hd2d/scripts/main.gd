@@ -3,6 +3,7 @@ extends Node2D
 const Animator = preload("res://scripts/rin_animator.gd")
 const RIN_HEIGHT: float=1.68
 const Mob = preload("res://scripts/enemy.gd")
+const Mission = preload("res://scripts/mission.gd")
 const W: float = 1280.0
 const H: float = 720.0
 const F: float = 540.0
@@ -15,6 +16,7 @@ const GOLD = Color("f0d49e")
 const CYAN = Color("6ad9da")
 const PINK = Color("f252ad")
 var anim = Animator.new()
+var mission = Mission.new()
 var mode: String = "lobby"
 var loading_time: float = 0.0
 var pos: Vector2 = Vector2(0,-10)
@@ -64,7 +66,7 @@ const ENEMY_COUNT: int = 6
 var clock: float = 0.0
 var ui_status: String = ""
 var ui_timer: float = 0.0
-var action_rects: Dictionary = {"fire":Rect2(1146,444,104,104),"jump":Rect2(1156,575,80,62),"crouch":Rect2(1058,575,88,62),"prone":Rect2(960,575,88,62),"sprint":Rect2(220,575,84,62),"reload":Rect2(1150,350,100,58),"back":Rect2(16,16,115,39)}
+var action_rects: Dictionary = {"fire":Rect2(1146,444,104,104),"jump":Rect2(1156,575,80,62),"crouch":Rect2(1058,575,88,62),"prone":Rect2(960,575,88,62),"sprint":Rect2(220,575,84,62),"reload":Rect2(1150,350,100,58),"back":Rect2(16,16,115,39),"interact":Rect2(895,140,174,60)}
 const JOY := Vector2(115,590)
 const GYRO_RECTS: Dictionary={"gyro":Rect2(395,60,126,42),"sensitivity":Rect2(530,60,113,42),"center":Rect2(652,60,114,42),"invert":Rect2(775,60,98,42),"axis":Rect2(882,60,101,42),"yaw_sign":Rect2(992,60,101,42)}
 
@@ -72,6 +74,7 @@ func _ready() -> void:
  Engine.max_fps = 90
  texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
  load_aim_settings()
+ mission.load_record()
  # Avoid allocating all enemy textures while the lobby is being loaded.
  if DisplayServer.get_name() != "headless" and OS.has_feature("mobile"):
   get_window().mode = Window.MODE_FULLSCREEN
@@ -101,6 +104,7 @@ func start_game() -> void:
  anim = Animator.new(); touch_joy = Vector2.ZERO; joy_id = -1; aim_id = -1
  kills = 0; ammo = 12; reserve = 108; reload_time = 0.0; shoot_hold = false
  player_hp=100;player_hurt=0.0;encounter_clear=false;battle_time=0.0
+ mission.begin()
  sprint_latch = false; fire_id = -1; shot_cool = 0.0; shot_flash = 0.0
  build_world(); update_camera()
  print("BLACK_SIGNAL_MOBS_READY: ",targets.size())
@@ -277,10 +281,20 @@ func fire() -> void:
   if target.take_hit():
    kills+=1
    if kills==ENEMY_COUNT:
-    encounter_clear=true;announce("СЕКТОР ОЧИЩЕН")
+    if mission.register_kills(kills):announce("СЕКТОР ОЧИЩЕН — К ЭВАКУАЦИИ")
+    else:announce("ВСЕ ВРАГИ УСТРАНЕНЫ — ПРОДОЛЖАЙ ЗАДАНИЕ")
    else:announce(target.display_name()+" УНИЧТОЖЕН")
   else:announce("ПОПАДАНИЕ")
  if ammo == 0: reload()
+
+func interact_mission() -> void:
+ if mode!="game" or player_hp<=0:return
+ var result: String=mission.interact(pos,kills,battle_time)
+ if result.is_empty():return
+ announce(result)
+ if mission.phase==Mission.Phase.COMPLETE:
+  encounter_clear=true;mode="victory";shoot_hold=false;touch_joy=Vector2.ZERO
+  print("BLACK_SIGNAL_CHAPTER01_COMPLETE: ",mission.mission_elapsed)
 
 func aim_target() -> int:
  var best: int=-1
@@ -310,17 +324,20 @@ func activate(key: String) -> void:
   "sprint": sprint_latch = not sprint_latch
   "reload": reload()
   "fire": fire()
+  "interact": interact_mission()
   "back": mode="lobby"; shoot_hold=false; touch_joy=Vector2.ZERO
 
 func _input(event: InputEvent) -> void:
  if event is InputEventKey and event.pressed and not event.echo:
   if mode=="lobby" and event.keycode==KEY_ENTER: start_game(); return
+  if mode=="victory" and event.keycode==KEY_ENTER: start_game(); return
   if mode!="game": return
   match event.physical_keycode:
    KEY_SPACE: activate("jump")
    KEY_C: activate("crouch")
    KEY_Z: activate("prone")
    KEY_R: activate("reload")
+   KEY_E: activate("interact")
    KEY_ESCAPE: activate("back")
    KEY_LEFT: yaw_target-=0.2
    KEY_RIGHT: yaw_target+=0.2
@@ -341,7 +358,7 @@ func _input(event: InputEvent) -> void:
   else: drag_at(event.position,event.relative,99)
 
 func press_at(p: Vector2,id: int) -> void:
- if mode=="defeat":
+ if mode=="defeat" or mode=="victory":
   if Rect2(460,410,360,72).has_point(p):start_game()
   elif Rect2(16,16,115,39).has_point(p):mode="lobby"
   return
@@ -440,6 +457,11 @@ func draw_city() -> void:
  for t in targets:
   var dep: float=local_of(t.p).y
   if dep>NEAR and dep<100.0:drawlist.append({"o":{"p":t.p,"kind":"mob","mob":t},"depth":dep})
+ if mission.has_marker():
+  var objective_pos: Vector2=mission.marker_position()
+  var objective_depth: float=local_of(objective_pos).y
+  if objective_depth>NEAR and objective_depth<160.0:
+   drawlist.append({"o":{"p":objective_pos,"kind":"mission"},"depth":objective_depth})
  drawlist.sort_custom(func(a,b): return a["depth"]>b["depth"])
  for entry in drawlist: draw_prop(entry["o"],entry["depth"])
  # Fine rain, subtle on-screen vignette lines.
@@ -472,6 +494,18 @@ func draw_prop(o: Dictionary, dep: float) -> void:
   for k in range(5,0,-1): draw_circle(end,scale_factor*float(k)*.14,Color(0.31,0.80,0.87,0.035))
  elif kind=="crate":
   var r:=Rect2(p-Vector2(.6,1.3)*scale_factor,Vector2(1.2,1.3)*scale_factor); draw_rect(r,Color("364350"));draw_rect(r,Color("141d2b"),false,2);draw_line(r.position,r.end,Color("69788a"),2)
+ elif kind=="mission":
+  var scan: bool=mission.phase==Mission.Phase.SCAN
+  var glow: Color=CYAN if scan else GOLD
+  var ph: float=(1.6 if scan else 3.2)*scale_factor
+  var pw: float=(0.8 if scan else 1.4)*scale_factor
+  var rect:=Rect2(p-Vector2(pw*.5,ph),Vector2(pw,ph))
+  draw_rect(rect,Color(0.02,0.10,0.16,0.87))
+  draw_rect(rect,glow,false,maxf(1.0,scale_factor*.06))
+  var signal: Vector2=p-Vector2(0,ph*1.30)
+  draw_circle(signal,clampf(scale_factor*.26,3.0,30.0),Color(glow.r,glow.g,glow.b,.32))
+  draw_arc(signal,clampf(scale_factor*.20,2.0,22.0),0.0,TAU,24,glow,2.0,true)
+  if scale_factor>8.0:text_at(signal+Vector2(-64,-17),"ТЕРМИНАЛ" if scan else "ЭВАКУАЦИЯ",14,glow)
  elif kind=="mob":
   draw_enemy(o["mob"],p,scale_factor)
 
@@ -500,7 +534,8 @@ func _draw() -> void:
   panel(Rect2(0,0,W,H),Color(0.015,0.02,0.06,0.25),Color.TRANSPARENT)
   panel(Rect2(925,478,345,190));text_at(Vector2(949,510),"СЕКТОР 07 • ТРЕНИРОВКА",20,GOLD);text_at(Vector2(950,534),"Одиночный / камера TPP • 2D",15,CYAN)
   button(Rect2(945,540,310,92),"НАЧАТЬ",true)
-  panel(Rect2(18,610,410,74));text_at(Vector2(32,637),"BLACK SIGNAL / HD2D",20,GOLD);text_at(Vector2(32,662),"Шесть типов противников • тест",15)
+  panel(Rect2(18,610,410,74));text_at(Vector2(32,637),"BLACK SIGNAL / HD2D",20,GOLD);text_at(Vector2(32,662),"Глава 01 • Сигнал и эвакуация",15)
+  if mission.best_seconds>=0:text_at(Vector2(32,594),"Рекорд прохождения: %.1f с"%mission.best_seconds,15,CYAN)
   return
  if mode=="loading":
   draw_texture_rect(LOADING,Rect2(0,0,W,H),false);return
@@ -520,20 +555,33 @@ func _draw() -> void:
   panel(Rect2(390,245,500,275));text_at(Vector2(480,310),"СИГНАЛ ПОТЕРЯН",30,PINK)
   text_at(Vector2(477,363),"Уничтожено: "+str(kills)+" / "+str(ENEMY_COUNT),22,GOLD)
   button(Rect2(460,410,360,72),"ПОВТОРИТЬ",true);button(action_rects["back"],"ЛОББИ")
- elif encounter_clear:
-  panel(Rect2(480,92,320,65))
-  text_at(Vector2(520,132),"СЕКТОР ОЧИЩЕН",23,CYAN)
+ elif mode=="victory":
+  panel(Rect2(0,0,W,H),Color(0.015,0.025,0.06,0.78),Color.TRANSPARENT)
+  panel(Rect2(382,208,516,336))
+  text_at(Vector2(440,269),"ГЛАВА 01 ЗАВЕРШЕНА",30,CYAN)
+  text_at(Vector2(456,318),"СИГНАЛ ВОССТАНОВЛЕН",19,GOLD)
+  text_at(Vector2(456,366),"Время: %.1f с   •   Устранено: %d"%[mission.mission_elapsed,kills],19)
+  text_at(Vector2(456,400),"Лучшее: %.1f с   •   Проходов: %d"%[mission.best_seconds,mission.completed_runs],17,CYAN)
+  button(Rect2(460,410,360,72),"ПОВТОРИТЬ",true)
+  button(action_rects["back"],"ЛОББИ")
 
 func draw_hud() -> void:
  button(action_rects["back"],"ЛОББИ")
  panel(Rect2(151,16,228,74));text_at(Vector2(165,41),"RIN  /  SECTOR 07",19,GOLD);text_at(Vector2(165,65),"Мобы: "+str(kills)+" / "+str(ENEMY_COUNT),17,CYAN)
+ panel(Rect2(380,120,503,61))
+ text_at(Vector2(394,147),mission.objective_text(kills),16,CYAN)
+ text_at(Vector2(394,169),"Время: %.1f с   •   Лучшее: %s"%[battle_time,"—" if mission.best_seconds<0 else "%.1f с"%mission.best_seconds],13,GOLD)
  var deg: int=posmod(int(rad_to_deg(yaw)),360);text_at(Vector2(575,35),"N  ·  %03d°"%deg,20,GOLD);draw_line(Vector2(460,47),Vector2(820,47),Color(0.8,0.8,0.86,.6),1)
  panel(Rect2(1110,16,144,130));text_at(Vector2(1120,37),"СЕКТОР 07",14,GOLD);draw_rect(Rect2(1154,46,55,90),Color("354257"));draw_line(Vector2(1181,46),Vector2(1181,136),Color("808d9d"),1)
  for t in targets:
   if t.living() and absf(t.p.y-pos.y)<120.0:
    var a:Vector2=t.p;draw_circle(Vector2(1181+a.x*3,clampf(136-(a.y-pos.y)*.7,48,135)),3,PINK)
  draw_circle(Vector2(1181+pos.x*3,126),4,CYAN)
+ if mission.has_marker():
+  var waypoint: Vector2=mission.marker_position()
+  draw_circle(Vector2(1181+waypoint.x*3,clampf(136-(waypoint.y-pos.y)*.7,48,135)),6,GOLD)
  draw_circle(JOY,80,Color(0.01,0.04,0.07,0.45));draw_arc(JOY,80,0,TAU,72,Color(0.85,0.9,1,.52),2,true);draw_circle(JOY+Vector2(touch_joy.x,-touch_joy.y)*55,35,Color(0.52,0.62,0.72,0.46));draw_arc(JOY+Vector2(touch_joy.x,-touch_joy.y)*55,35,0,TAU,48,Color(0.87,0.91,1,.5),1.4,true)
+ if mission.in_range(pos):button(action_rects["interact"],"ВЗАИМОДЕЙСТВ.",true)
  button(action_rects["fire"],"ОГОНЬ",shoot_hold);button(action_rects["reload"],"ПЕРЕЗАР.",reload_time>0);button(action_rects["jump"],"ПРЫЖОК",anim.jumping);button(action_rects["crouch"],"ПРИСЕСТЬ",anim.target_stance=="crouch");button(action_rects["prone"],"ЛЕЧЬ",anim.target_stance=="prone");button(action_rects["sprint"],"БЕГ",sprint_latch)
  panel(Rect2(430,595,425,95));text_at(Vector2(449,621),"K-9   /   "+anim.state_label(),17,GOLD);text_at(Vector2(449,654),"%02d  /  %d"%[ammo,reserve],28);draw_rect(Rect2(449,669,386,6),Color("392334"));draw_rect(Rect2(449,669,386*float(player_hp)/100.0,6),CYAN if player_hp>30 else PINK);text_at(Vector2(700,653),str(player_hp)+" HP",16,CYAN)
  if reload_time>0: draw_rect(Rect2(449,680,386*(1-reload_time/1.5),4),GOLD)
@@ -646,7 +694,25 @@ func run_smoke() -> void:
   assert(unit.clip==Mob.DEATH and unit.hp==0)
   for n in range(100):unit.update(.016,pos,true)
   assert(unit.frame_for(unit.clip,unit.time)==17)
+ # Objective tests must not modify player records in user://.
+ var quest=Mission.new()
+ quest.begin()
+ assert(quest.phase==Mission.Phase.SCAN)
+ assert(quest.interact(Vector2.ZERO,0,1.0,false)=="")
+ assert(quest.interact(Mission.TERMINAL,0,2.0,false)!="")
+ assert(quest.phase==Mission.Phase.ELIMINATE)
+ assert(not quest.register_kills(5))
+ assert(quest.register_kills(6))
+ assert(quest.phase==Mission.Phase.EXTRACT)
+ assert(quest.interact(Mission.TERMINAL,6,50.0,false)=="")
+ assert(quest.interact(Mission.EXFIL,5,55.0,false)=="")
+ assert(quest.interact(Mission.EXFIL,6,65.0,false)!="")
+ assert(quest.phase==Mission.Phase.COMPLETE and quest.completed_runs==1)
+ assert(quest.best_seconds==65.0)
+ print("BLACK_SIGNAL_MISSION_SMOKE_OK: objective order, range, kill gate, finish")
+
  start_game();mode="game"
+ assert(mission.phase==Mission.Phase.SCAN)
  assert(targets[2].height()>targets[1].height() and targets[4].height()<RIN_HEIGHT and targets[5].altitude()>1.0)
  # Align held aim with the actual center of the first unit, not a stale fixed height.
  yaw=0.0;yaw_target=0.0;update_camera()
