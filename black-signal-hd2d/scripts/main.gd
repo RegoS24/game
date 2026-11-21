@@ -955,6 +955,16 @@ func run_smoke() -> void:
   if restored_probe.get(field)!=normalized_probe.get(field):
    push_error("CHECKPOINT_SMOKE: mismatch in "+field+" saved="+JSON.stringify(normalized_probe.get(field))+" restored="+JSON.stringify(restored_probe.get(field)))
   assert(restored_probe.get(field)==normalized_probe.get(field))
+ # Malformed saves must never restore unsafe or contradictory state.
+ var invalid_probe: Dictionary=probe.duplicate(true)
+ invalid_probe["stations"]=[0,0]
+ assert(not Checkpoint.validate(invalid_probe))
+ invalid_probe=probe.duplicate(true)
+ invalid_probe["position"]=[INF,0.0]
+ assert(not Checkpoint.validate(invalid_probe))
+ invalid_probe=probe.duplicate(true)
+ invalid_probe["time"]=INF
+ assert(not Checkpoint.validate(invalid_probe))
  probe["hp"]=0
  assert(not Checkpoint.validate(probe))
  Checkpoint.clear(probe_path)
