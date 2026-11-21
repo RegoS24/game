@@ -19,6 +19,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-21: Hardened checkpoint validation against non-finite player/enemy coordinates, non-finite aim/timer values and duplicate/partial medical station IDs. Added headless smoke assertions for these corrupt-save cases. Source committed; **CI and Android runtime results not yet verified**. Remaining save blockers: full campaign slots, durable write-failure recovery and real-device lifecycle tests.
+
+
 - 2026-11-21: Added versioned Chapter 01 checkpoint persistence with atomic JSON replacement, strict state validation, auto-save on pause/background and lobby resume into manual-resume pause. Stores player HP/ammo/position/aim, mission phase, elapsed time, used med stations, enemy HP and positions. Clears on victory, defeat or explicit new game; never touches personal-best or gyro settings. Headless roundtrip/corruption smoke added. Limitations: mid-animation frames, enemy cooldowns and temporary reload progress intentionally reset on restore; full campaign slots and real-device lifecycle tests remain outstanding. CI result pending.
 
 
