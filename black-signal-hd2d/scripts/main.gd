@@ -959,6 +959,10 @@ func run_smoke() -> void:
  var invalid_probe: Dictionary=probe.duplicate(true)
  invalid_probe["stations"]=[0,0]
  assert(not Checkpoint.validate(invalid_probe))
+ for invalid_station in [INF,-INF,NAN,0.5,3.0]:
+  invalid_probe=probe.duplicate(true)
+  invalid_probe["stations"]=[invalid_station]
+  assert(not Checkpoint.validate(invalid_probe))
  invalid_probe=probe.duplicate(true)
  invalid_probe["position"]=[INF,0.0]
  assert(not Checkpoint.validate(invalid_probe))
