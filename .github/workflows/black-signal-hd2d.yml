@@ -58,6 +58,8 @@ jobs:
           python black-signal-hd2d/prepare_atlases.py | tee /tmp/rin_stable.log
           grep -q RIN_STABLE_RESAMPLE_OK /tmp/rin_stable.log
           python black-signal-hd2d/prepare_mobs.py
+          python black-signal-hd2d/tests/test_mob_directional_atlases.py | tee /tmp/mob_atlas_test.log
+          grep -q BLACK_SIGNAL_MOB_ATLAS_SMOKE_OK /tmp/mob_atlas_test.log
           python black-signal-hd2d/prepare_locomotion.py | tee /tmp/rin_gait.log
           for gait in run crouch_walk crawl; do grep -q "RIN_ALTERNATION_OK $gait" /tmp/rin_gait.log; done
           python black-signal-hd2d/pack_rin_90fps.py | tee /tmp/rin90.log
