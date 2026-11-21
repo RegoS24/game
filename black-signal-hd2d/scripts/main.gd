@@ -965,6 +965,20 @@ func run_smoke() -> void:
  invalid_probe=probe.duplicate(true)
  invalid_probe["time"]=INF
  assert(not Checkpoint.validate(invalid_probe))
+ # JSON accepts numeric values that must not silently truncate into gameplay counters.
+ for key in ["version","hp","ammo","reserve","kills","phase"]:
+  invalid_probe=probe.duplicate(true)
+  invalid_probe[key]=float(probe[key])+0.5
+  assert(not Checkpoint.validate(invalid_probe))
+ invalid_probe=probe.duplicate(true)
+ invalid_probe["enemies"][0]["kind"]=0.5
+ assert(not Checkpoint.validate(invalid_probe))
+ invalid_probe=probe.duplicate(true)
+ invalid_probe["enemies"][0]["hp"]=1.5
+ assert(not Checkpoint.validate(invalid_probe))
+ invalid_probe=probe.duplicate(true)
+ invalid_probe["ammo"]=INF
+ assert(not Checkpoint.validate(invalid_probe))
  probe["hp"]=0
  assert(not Checkpoint.validate(probe))
  Checkpoint.clear(probe_path)
