@@ -69,7 +69,7 @@ const ENEMY_COUNT: int = 6
 var clock: float = 0.0
 var ui_status: String = ""
 var ui_timer: float = 0.0
-var action_rects: Dictionary = {"fire":Rect2(1146,444,104,104),"jump":Rect2(1156,575,80,62),"crouch":Rect2(1058,575,88,62),"prone":Rect2(960,575,88,62),"sprint":Rect2(220,575,84,62),"reload":Rect2(1150,350,100,58),"back":Rect2(16,16,115,39),"interact":Rect2(895,140,174,60)}
+var action_rects: Dictionary = {"fire":Rect2(1146,444,104,104),"jump":Rect2(1156,575,80,62),"crouch":Rect2(1058,575,88,62),"prone":Rect2(960,575,88,62),"sprint":Rect2(220,575,84,62),"reload":Rect2(1150,350,100,58),"back":Rect2(16,16,115,39),"pause":Rect2(16,64,115,42),"interact":Rect2(895,140,174,60)}
 const JOY := Vector2(115,590)
 const GYRO_RECTS: Dictionary={"gyro":Rect2(395,60,126,42),"sensitivity":Rect2(530,60,113,42),"center":Rect2(652,60,114,42),"invert":Rect2(775,60,98,42),"axis":Rect2(882,60,101,42),"yaw_sign":Rect2(992,60,101,42)}
 
@@ -331,8 +331,15 @@ func aim_target() -> int:
 func reload() -> void:
  if ammo<12 and reserve>0 and reload_time<=0: reload_time=1.5
 
+func toggle_pause() -> void:
+ if mode=="game":
+  mode="paused";shoot_hold=false;fire_id=-1;touch_joy=Vector2.ZERO;joy_id=-1;aim_id=-1;motion=Vector2.ZERO
+ elif mode=="paused":
+  mode="game";begin_gyro_calibration()
+
 func activate(key: String) -> void:
  match key:
+  "pause":toggle_pause()
   "jump": anim.request_jump()
   "crouch": anim.request_crouch()
   "prone": anim.request_prone()
@@ -346,8 +353,12 @@ func _input(event: InputEvent) -> void:
  if event is InputEventKey and event.pressed and not event.echo:
   if mode=="lobby" and event.keycode==KEY_ENTER: start_game(); return
   if mode=="victory" and event.keycode==KEY_ENTER: start_game(); return
+  if mode=="paused":
+   if event.physical_keycode==KEY_ESCAPE or event.physical_keycode==KEY_P:toggle_pause()
+   return
   if mode!="game": return
   match event.physical_keycode:
+   KEY_P: toggle_pause()
    KEY_SPACE: activate("jump")
    KEY_C: activate("crouch")
    KEY_Z: activate("prone")
@@ -373,6 +384,10 @@ func _input(event: InputEvent) -> void:
   else: drag_at(event.position,event.relative,99)
 
 func press_at(p: Vector2,id: int) -> void:
+ if mode=="paused":
+  if Rect2(460,410,360,72).has_point(p) or Rect2(action_rects["pause"]).has_point(p):toggle_pause()
+  elif Rect2(action_rects["back"]).has_point(p):mode="lobby"
+  return
  if mode=="defeat" or mode=="victory":
   if Rect2(460,410,360,72).has_point(p):start_game()
   elif Rect2(16,16,115,39).has_point(p):mode="lobby"
@@ -568,6 +583,14 @@ func _draw() -> void:
  if shot_flash>0:
   draw_circle(foot+Vector2(-38,-105),12*shot_flash/.08,Color("ffda9a"));draw_line(foot+Vector2(-38,-105),reticle(),Color(1,.8,.4,shot_flash*5),2)
  draw_hud()
+ if mode=="paused":
+  panel(Rect2(0,0,W,H),Color(0.01,0.02,0.05,0.72),Color.TRANSPARENT)
+  panel(Rect2(390,240,500,290))
+  text_at(Vector2(535,304),"ПАУЗА",32,GOLD)
+  text_at(Vector2(445,355),"Бой, таймер и управление остановлены",17,CYAN)
+  button(Rect2(460,410,360,72),"ПРОДОЛЖИТЬ",true)
+  button(action_rects["back"],"ЛОББИ")
+  return
  if player_hurt>0.0:draw_rect(Rect2(0,0,W,H),Color(0.8,0.04,0.08,player_hurt*0.40))
  if mode=="defeat":
   panel(Rect2(0,0,W,H),Color(0.02,0.02,0.05,0.75),Color.TRANSPARENT)
@@ -586,6 +609,7 @@ func _draw() -> void:
 
 func draw_hud() -> void:
  button(action_rects["back"],"ЛОББИ")
+ button(action_rects["pause"],"ПАУЗА")
  panel(Rect2(151,16,228,74));text_at(Vector2(165,41),"RIN  /  SECTOR 07",19,GOLD);text_at(Vector2(165,65),"Мобы: "+str(kills)+" / "+str(ENEMY_COUNT),17,CYAN)
  panel(Rect2(380,120,503,61))
  text_at(Vector2(394,147),mission.objective_text(kills),16,CYAN)
@@ -763,6 +787,20 @@ func run_smoke() -> void:
  var free_end: Vector2=Cover.move_circle(blocked_start,Vector2(-0.25,0.0),0.31,movement_wall)
  assert(free_end.distance_to(blocked_start)>0.20)
  print("BLACK_SIGNAL_MOVEMENT_SMOKE_OK: blocked footfalls and free movement")
+ # Pause must freeze the combat state and clear held touch controls.
+ mode="game";touch_joy=Vector2(0.8,0.2);shoot_hold=true;fire_id=2;joy_id=1;aim_id=3;motion=Vector2(1,0)
+ var pause_hp: int=player_hp
+ var pause_pos: Vector2=pos
+ var pause_ammo: int=ammo
+ var pause_time: float=battle_time
+ toggle_pause()
+ assert(mode=="paused" and not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)
+ assert(touch_joy==Vector2.ZERO and motion==Vector2.ZERO)
+ _process(0.1)
+ assert(player_hp==pause_hp and pos==pause_pos and ammo==pause_ammo and battle_time==pause_time)
+ toggle_pause()
+ assert(mode=="game" and gyro_calibration>0.0)
+ print("BLACK_SIGNAL_PAUSE_SMOKE_OK: gameplay frozen, touch reset, resume recalibrates gyro")
  # Objective tests must not modify player records in user://.
  var quest=Mission.new()
  quest.begin()
