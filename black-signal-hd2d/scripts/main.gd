@@ -238,9 +238,11 @@ func _process(dt: float) -> void:
   var stance_speed: float=(5.8 if sprint else 3.1)*anim.speed_factor()
   var goal: Vector2 = (right*input_vector.x+forward*input_vector.y)*stance_speed
   motion = motion.lerp(goal,1.0-exp(-dt*(10.5 if goal.length()>motion.length() else 8.0)))
+  var previous_pos: Vector2=pos
   pos=Cover.move_circle(pos,motion*dt,0.31,cover_rects)
   pos.x = clampf(pos.x,-5.9,5.9); pos.y = clampf(pos.y,-65.0,215.0)
-  var real_speed: float=motion.length()
+  # Animate actual displacement, not requested velocity: feet stop at cover/walls.
+  var real_speed: float=pos.distance_to(previous_pos)/maxf(dt,0.0001)
   anim.tick(dt,minf(1.0,real_speed/maxf(0.1,stance_speed)),sprint and real_speed>3.5 and anim.stance=="stand")
   update_camera()
   shot_cool = maxf(0,shot_cool-dt); shot_flash = maxf(0,shot_flash-dt)
@@ -747,6 +749,14 @@ func run_smoke() -> void:
   assert(unit.clip==Mob.DEATH and unit.hp==0)
   for n in range(100):unit.update(.016,pos,true)
   assert(unit.frame_for(unit.clip,unit.time)==17)
+ # Requested velocity can remain high against cover; animation must follow displacement.
+ var movement_wall: Array[Rect2]=[Rect2(Vector2(0.0,0.0),Vector2(2.0,2.0))]
+ var blocked_start:=Vector2(-0.31,1.0)
+ var blocked_end: Vector2=Cover.move_circle(blocked_start,Vector2(0.25,0.0),0.31,movement_wall)
+ assert(blocked_end.distance_to(blocked_start)<0.01)
+ var free_end: Vector2=Cover.move_circle(blocked_start,Vector2(-0.25,0.0),0.31,movement_wall)
+ assert(free_end.distance_to(blocked_start)>0.20)
+ print("BLACK_SIGNAL_MOVEMENT_SMOKE_OK: blocked footfalls and free movement")
  # Objective tests must not modify player records in user://.
  var quest=Mission.new()
  quest.begin()
