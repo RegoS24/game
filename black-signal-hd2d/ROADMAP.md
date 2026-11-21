@@ -18,6 +18,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Persist verified changes in the repository and report clear limitations.
 
 ## History
+- 2026-11-21: Added explicit in-game pause/resume control (touch and P/Escape), overlay, held-input reset, gyro recalibration on resume and headless regression asserting HP, ammo, position and mission timer remain unchanged while paused. CI and Android emulator verification pending. This is not a save/resume-from-disk feature.
+
 - v0.7.6: raster stability work, signed APK with emulator smoke, user dissatisfaction with animation unresolved.
 - v0.8.0: first objective-based level with terminal interaction, enemy gate, exfil and best-time save; CI + emulator passed.
 - v0.8.1: actual world-coordinate cover collisions, cover-aware hitscan and enemy obstacle flanking; awaiting device evaluation.
