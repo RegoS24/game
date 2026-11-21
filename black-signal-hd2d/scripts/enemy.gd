@@ -214,10 +214,8 @@ func paint(canvas: CanvasItem,foot: Vector2,pixels_per_meter: float,to_camera: V
  if hit_flash>0.0 and living() and view==FRONT and clip!=ATTACK:
   draw_pose(canvas,origin,dst,view,5,HIT_DURATION-hit_flash,Color.WHITE,camera_right)
   return
- var a: float=blend*blend*(3.0-2.0*blend)
+ # A dual-sprite crossfade draws two different silhouettes simultaneously.
+ # On a small mobile screen this reads as ghost limbs / temporal shimmer.
+ # Show one authored pose at a time; locomotion phase is carried in set_clip().
  var tint: Color=Color(1.0,0.86,0.86,1.0) if hit_flash>0.0 else Color.WHITE
- if a<1.0:
-  var old_tint: Color=tint;old_tint.a=1.0-a
-  draw_pose(canvas,origin,dst,view,prior_clip,prior_time,old_tint,camera_right)
- tint.a=a
  draw_pose(canvas,origin,dst,view,clip,time,tint,camera_right)
