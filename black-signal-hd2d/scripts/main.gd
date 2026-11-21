@@ -940,8 +940,21 @@ func run_smoke() -> void:
  var probe: Dictionary=checkpoint_data()
  assert(Checkpoint.validate(probe))
  var probe_path: String="user://checkpoint_smoke.json"
- assert(Checkpoint.write(probe,probe_path))
- assert(Checkpoint.read(probe_path)==probe)
+ var checkpoint_written: bool=Checkpoint.write(probe,probe_path)
+ if not checkpoint_written:
+  push_error("CHECKPOINT_SMOKE: write failed for "+ProjectSettings.globalize_path(probe_path))
+ assert(checkpoint_written)
+ var restored_probe: Dictionary=Checkpoint.read(probe_path)
+ if restored_probe.is_empty():
+  push_error("CHECKPOINT_SMOKE: read or validation failed after write")
+ assert(not restored_probe.is_empty())
+ # JSON normalizes numeric types (integers/floats). Compare serialized values,
+ # not Variant Dictionary identity or ordering.
+ var checkpoint_fields: Array[String]=["version","position","yaw","pitch","time","hp","ammo","reserve","kills","phase","stations","enemies"]
+ for field in checkpoint_fields:
+  if JSON.stringify(restored_probe.get(field))!=JSON.stringify(probe.get(field)):
+   push_error("CHECKPOINT_SMOKE: mismatch in "+field+" saved="+JSON.stringify(probe.get(field))+" restored="+JSON.stringify(restored_probe.get(field)))
+  assert(JSON.stringify(restored_probe.get(field))==JSON.stringify(probe.get(field)))
  probe["hp"]=0
  assert(not Checkpoint.validate(probe))
  Checkpoint.clear(probe_path)
