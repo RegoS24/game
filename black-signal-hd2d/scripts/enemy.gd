@@ -157,7 +157,10 @@ func update(dt: float, player: Vector2, player_alive: bool, obstacles: Array[Rec
   var expected_speed: float=float(STATS[kind][2] if clip==RUN else STATS[kind][1])
   var traveled: float=p.distance_to(movement_origin)
   var speed_ratio: float=clampf(traveled/maxf(0.0001,expected_speed*dt),0.0,1.0)
-  time-=dt*(1.0-speed_ratio)
+  # A freshly selected WALK/RUN clip can start at phase zero. Subtracting
+  # unused dt without clamping wraps a negative phase to the *last* frame,
+  # causing a visible footfall snap on slow/obstructed movement.
+  time=maxf(0.0,time-dt*(1.0-speed_ratio))
   if speed_ratio<0.05:set_clip(IDLE)
  if clip<ATTACK:time=fposmod(time,float(DURATIONS[clip]))
  return 0
