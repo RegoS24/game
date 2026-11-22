@@ -57,3 +57,10 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - 2026-11-21: enemy WALK/RUN animation phase now scales with actual collision-resolved displacement, and enemies switch to IDLE when blocked; addresses running-in-place and foot sliding at crates. Source patch committed; headless Godot, CI and physical Android visual review not yet verified. Authored directional pose/rig replacement remains the priority.
 
 - v0.9.0: Six procedural illustrated cyberpunk building families with four directional views each, embedded into 2.5D city rendering and exported APK. These are newly generated game textures based on visual references; image-generation turnarounds have not been packaged verbatim. No physically-based 3D materials or real building mesh geometry yet.
+
+### 2026-11-22 — CI failure triage (run #70)
+- Confirmed failing step: Generate and validate animation atlases; audit raised `raider: empty frame 126` before Godot import and APK export.
+- Root cause: `prepare_mobs.py` intentionally fills 126 of 128 texture cells (72 front + 30 side + 24 rear); indices 126 and 127 are transparent padding, not authored poses.
+- Updated audit to inspect 126 populated frames and compare actual 21 six-frame clips rather than eight-column texture rows; updated metric regression for clip boundaries and loop closures.
+- Acceptance: motion regression passes, all six generated atlases pass 126-frame audit, Godot smoke and Android export complete, then review actual motion captures. CI results for these commits pending.
+- Blockers: no new verified APK; visual quality and physical-device validation outstanding; original pose/rig quality remains unresolved.
