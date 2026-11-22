@@ -40,6 +40,8 @@ func save_record() -> bool:
  cfg.set_value("chapter01","best_seconds",best_seconds)
  cfg.set_value("chapter01","completed_runs",completed_runs)
  if cfg.save(temp_path)!=OK:
+  # A failed write may leave a partial staging file; never retain it.
+  DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
   return false
  var result: Error=DirAccess.rename_absolute(ProjectSettings.globalize_path(temp_path),ProjectSettings.globalize_path(SAVE_PATH))
  if result!=OK:
