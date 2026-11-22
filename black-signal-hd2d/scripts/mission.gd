@@ -33,10 +33,19 @@ func load_record() -> void:
   if raw_runs>=0 and raw_runs<2147483647:completed_runs=int(raw_runs)
 
 func save_record() -> bool:
+ # Write a sibling file first: an interrupted write must not truncate the
+ # last valid personal best. Rename only after ConfigFile.save succeeds.
+ var temp_path: String=SAVE_PATH+".tmp"
  var cfg:=ConfigFile.new()
  cfg.set_value("chapter01","best_seconds",best_seconds)
  cfg.set_value("chapter01","completed_runs",completed_runs)
- return cfg.save(SAVE_PATH)==OK
+ if cfg.save(temp_path)!=OK:
+  return false
+ var result: Error=DirAccess.rename_absolute(ProjectSettings.globalize_path(temp_path),ProjectSettings.globalize_path(SAVE_PATH))
+ if result!=OK:
+  DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
+  return false
+ return true
 
 func has_marker() -> bool:
  return phase==Phase.SCAN or phase==Phase.EXTRACT
