@@ -15,6 +15,7 @@ const STATS = [
 const BODY_WIDTH=[0.66,0.78,1.16,0.61,0.69,1.40]
 const COLLISION_RADIUS=[0.32,0.39,0.58,0.31,0.44,0.70]
 const HIT_DURATION: float=0.24
+const HIT_STUN_DURATION: float=0.18
 const FOOT_ANCHOR: float=209.0
 const DURATIONS = [1.65,0.95,0.65,0.88,1.10]
 const FRAME_W: float = 192.0
@@ -37,6 +38,7 @@ var prior_time: float = 0.0
 var blend: float = 1.0
 var cool: float = 0.0
 var hit_flash: float = 0.0
+var hit_stun: float = 0.0
 var attack_flash: float = 0.0
 var attack_done: bool = false
 var age: float = 0.0
@@ -87,7 +89,10 @@ func take_hit() -> bool:
  if not living(): return false
  hp-=1;hit_flash=HIT_DURATION;activated=true
  if hp<=0:
-  hp=0;set_clip(DEATH);return true
+  hp=0;hit_stun=0.0;set_clip(DEATH);return true
+ # A nonlethal shot briefly stops pursuit, making hits readable and giving
+ # the player a genuine repositioning window, without extending attack range.
+ hit_stun=HIT_STUN_DURATION
  # A confirmed shot interrupts an uncommitted windup. Once the active frame
  # has fired, damage cannot be undone; cooldown still prevents an instant retry.
  if clip==ATTACK and not attack_done:
@@ -105,6 +110,11 @@ func update(dt: float, player: Vector2, player_alive: bool, obstacles: Array[Rec
   time=minf(time,float(DURATIONS[DEATH]));return 0
  if not player_alive:
   set_clip(IDLE);return 0
+ if hit_stun>0.0:
+  hit_stun=maxf(0.0,hit_stun-dt)
+  if clip!=ATTACK or not attack_done:
+   set_clip(IDLE)
+   return 0
  var movement_origin: Vector2=p
  var rel: Vector2=player-p
  var distance: float=rel.length()
