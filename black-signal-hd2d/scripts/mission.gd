@@ -44,6 +44,8 @@ func register_kills(count: int) -> bool:
 
 func interact(player: Vector2,kills: int,elapsed: float,persist: bool=true) -> String:
  if not in_range(player):return ""
+ # Reject invalid completion times before mutating the campaign record.
+ if phase==Phase.EXTRACT and (not is_finite(elapsed) or elapsed<0.0):return ""
  if phase==Phase.SCAN:
   phase=Phase.ELIMINATE
   if kills>=REQUIRED_KILLS:phase=Phase.EXTRACT
