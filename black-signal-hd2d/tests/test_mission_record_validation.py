@@ -31,4 +31,10 @@ assert "cfg.save(temp_path)" in save
 assert "cfg.save(SAVE_PATH)" not in save
 assert save.index("cfg.save(temp_path)") < save.index("DirAccess.rename_absolute(")
 assert "if result!=OK:" in save and "DirAccess.remove_absolute(" in save
+# Both staging failures and rename failures must remove the temporary file.
+save_failure = save[save.index("if cfg.save(temp_path)!=OK:"):save.index("var result: Error=DirAccess.rename_absolute(")]
+assert "DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))" in save_failure
+assert save_failure.index("DirAccess.remove_absolute(") < save_failure.index("return false")
+rename_failure = save[save.index("if result!=OK:"):]
+assert "DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))" in rename_failure
 print("BLACK_SIGNAL_MISSION_RECORD_VALIDATION_OK")
