@@ -107,3 +107,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - `mission.gd::load_record()` now clears in-memory personal-best and completion counters **before** loading the ConfigFile. Missing/unreadable files previously returned early and could retain stale values from an earlier load in the same process. Commits `c97dfe3`, `93b31aa`.
 - Acceptance: source regression verifies both resets precede the early return; push CI passes Godot headless smoke, Android export and emulator launch. **CI and real-device results pending.** No animation or visual quality improvement claimed.
 - Next: verify Actions/artifacts, replace warped directional source poses or implement a validated 2D rig, then continue campaign, audio and performance work.
+
+### 2026-11-22 — Staged Chapter 01 record writes
+- Chapter 01 personal-best records now save to a sibling `.tmp` ConfigFile before renaming over the destination, rather than truncating the existing record during a direct write. Failed staging or rename returns failure; a failed rename removes its temporary file. Commits `9e7d8d2` and `abaa182`.
+- Acceptance: source regression passes on push, Godot headless smoke and Android export pass, then test forced interruption/low-storage behavior and app restart on an Android device. **No CI, Android durability or visual-quality result claimed yet.**
+- Remaining: authored Rin/mob directional rigs and shimmer, campaign depth, sound/UX, real-device performance and release QA.
