@@ -86,3 +86,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Added headless smoke assertion for identical enemy positions, positive separation and no penetration of cover. Code commit: `c4d2a2b9d9533dc21f11010ea9095846b90b876d`.
 - Acceptance: push CI headless smoke, Android export and emulator smoke succeed; verify enemies visually in a crowded encounter. This addresses coincident bodies, **not** authored 2D gait quality or shimmer.
 - Remaining blockers: approved directional Rin/enemy source poses or rig, full campaign, audio/UX, real-device performance and motion capture.
+
+### 2026-11-22 — Mission completion record integrity
+- Extraction now rejects negative, NaN and infinite elapsed times before changing completion count or personal best (`9937c90`). This prevents invalid mission timing from contaminating persistent progression.
+- Added source regression and push CI gate (`669b5cc`, `9810566`). Acceptance: source test and Godot smoke pass; Android export and emulator launch succeed. **CI and device results pending.**
+- Blockers: authored directional Rin/mob animation source, visible shimmer, full campaign/content, sound and physical Android QA. No claim of improved visual quality from this change.
