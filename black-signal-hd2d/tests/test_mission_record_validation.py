@@ -14,6 +14,11 @@ for token in (
     "raw_runs>=0 and raw_runs<2147483647",
 ):
     assert token in load, f"Missing mission record validation: {token}"
+# A failed/missing save must clear stale in-memory values before early return.
+assert load.index("best_seconds=-1.0") < load.index("cfg.load(SAVE_PATH)")
+assert load.index("completed_runs=0") < load.index("cfg.load(SAVE_PATH)")
+assert load.count("best_seconds=-1.0") == 1
+assert load.count("completed_runs=0") == 1
 assert "int(cfg.get_value" not in load and "float(cfg.get_value" not in load
 assert load.index("typeof(raw_best)") < load.index("float(raw_best)")
 assert load.index("typeof(raw_runs)") < load.index("int(raw_runs)")
