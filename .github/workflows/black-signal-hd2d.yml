@@ -145,7 +145,9 @@ jobs:
             dist/failure.png
             dist/android.log
           if-no-files-found: ignore
+      # Pushes always build and upload an APK artifact; only deliberate manual runs publish releases.
       - name: Publish development build
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
