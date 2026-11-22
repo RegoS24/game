@@ -112,3 +112,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Chapter 01 personal-best records now save to a sibling `.tmp` ConfigFile before renaming over the destination, rather than truncating the existing record during a direct write. Failed staging or rename returns failure; a failed rename removes its temporary file. Commits `9e7d8d2` and `abaa182`.
 - Acceptance: source regression passes on push, Godot headless smoke and Android export pass, then test forced interruption/low-storage behavior and app restart on an Android device. **No CI, Android durability or visual-quality result claimed yet.**
 - Remaining: authored Rin/mob directional rigs and shimmer, campaign depth, sound/UX, real-device performance and release QA.
+
+### 2026-11-22 — Clean failed record staging writes
+- `mission.gd::save_record()` now removes a partially written sibling `.tmp` when `ConfigFile.save()` fails; the existing cleanup on rename failure is retained. Commits `0137b7a`, `54bcb95`.
+- Existing `tests/test_mission_record_validation.py` now asserts both failure paths remove the staging file before returning. Acceptance: Python regression passes in push CI, Godot headless and Android export pass, then interrupted/low-storage write behavior is verified on an actual Android device. **CI and device outcomes not yet confirmed.**
+- Priority blockers unchanged: authored directional Rin/enemy animation rigs and shimmer, combat feel, mission/level depth, sound and release QA.
