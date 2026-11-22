@@ -18,8 +18,17 @@ func begin() -> void:
 func load_record() -> void:
  var cfg:=ConfigFile.new()
  if cfg.load(SAVE_PATH)!=OK:return
- best_seconds=maxf(-1.0,float(cfg.get_value("chapter01","best_seconds",-1.0)))
- completed_runs=maxi(0,int(cfg.get_value("chapter01","completed_runs",0)))
+ # Treat the record as untrusted: corrupt or edited ConfigFile values must not
+ # become NaN/Infinity, negative counts, or invalid numeric conversions.
+ var raw_best: Variant=cfg.get_value("chapter01","best_seconds",-1.0)
+ var raw_runs: Variant=cfg.get_value("chapter01","completed_runs",0)
+ best_seconds=-1.0
+ completed_runs=0
+ if typeof(raw_best)==TYPE_FLOAT or typeof(raw_best)==TYPE_INT:
+  var candidate: float=float(raw_best)
+  if is_finite(candidate) and candidate>=0.0:best_seconds=candidate
+ if typeof(raw_runs)==TYPE_INT:
+  if raw_runs>=0 and raw_runs<2147483647:completed_runs=int(raw_runs)
 
 func save_record() -> bool:
  var cfg:=ConfigFile.new()
