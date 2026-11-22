@@ -904,6 +904,17 @@ func run_smoke() -> void:
   var damage: int=0
   for n in range(90):damage+=unit.update(.016,unit.p+Vector2(0,0.5),true)
   assert(damage==int(Mob.STATS[i][4]))
+  # Regression: once an enemy commits to a strike, moving behind its
+  # locked facing must prevent damage even while the target is in range.
+  unit.cool=0.0
+  unit.set_clip(Mob.IDLE)
+  unit.update(.016,unit.p+Vector2(0,0.5),true)
+  assert(unit.clip==Mob.ATTACK)
+  var rear_target: Vector2=unit.p-unit.heading*0.5
+  var rear_damage: int=0
+  for rear_step in range(45):
+   rear_damage+=unit.update(.016,rear_target,true)
+  assert(unit.attack_done and rear_damage==0)
   while unit.living():unit.take_hit()
   assert(unit.clip==Mob.DEATH and unit.hp==0)
   for n in range(100):unit.update(.016,pos,true)
