@@ -70,3 +70,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Source patch: `28f0c623525ee2003a6b01beb9b57016af6732fb`. **Not yet validated by a completed new CI run, APK or physical Android motion capture.**
 - Acceptance: headless movement tests pass, Android build passes, then visually compare first steps and slow obstacle movement at 30/60 FPS; do not claim this repairs authored poses or texture shimmer.
 - Blockers: verify latest Actions run after prior #70 atlas failure, improve authored directional Rin/enemy art, complete campaign/UX/audio and real-device performance QA.
+
+### 2026-11-22 — Correct CI expected populated enemy frames
+- Fixed a deterministic CI mismatch in `.github/workflows/black-signal-hd2d.yml`: the updated atlas auditor validates **126 authored frames per mob × 6 mobs = 756**, while the workflow still grepped for the obsolete `768` marker. This would fail the job even if the auditor passed.
+- Commit: `1972ffd00051b7d23ba3971ebe63d53467d16663`. Acceptance: atlas generation and audit print `BLACK_SIGNAL_FULL_MOB_ATLAS_OK 756`, then headless smoke, signed APK export, emulator launch and screenshot artifacts all succeed in the same workflow run.
+- Status: source/workflow consistency verified by reading both files; fresh Actions result, Android APK and actual device visuals **not yet verified**. No claims of animation-quality improvement. Next: inspect CI outcome before replacing authored directional sprites and expanding gameplay.
