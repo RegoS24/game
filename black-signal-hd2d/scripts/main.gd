@@ -335,8 +335,11 @@ func update_enemies(dt: float) -> void:
    var diff: Vector2=targets[i].p-targets[j].p
    var distance: float=diff.length()
    var required: float=targets[i].radius()+targets[j].radius()+0.12
-   if distance<required and distance>0.01:
-    var push: Vector2=diff.normalized()*(required-distance)*minf(0.5,dt*4.0)
+   if distance<required:
+    # Coincident spawns have no normalized direction; give them a deterministic
+    # separating axis instead of leaving two enemies permanently stacked.
+    var axis: Vector2=diff/distance if distance>0.01 else Vector2(1.0,0.0)
+    var push: Vector2=axis*(required-distance)*minf(0.5,dt*4.0)
     targets[i].p=Cover.move_circle(targets[i].p,push,targets[i].radius(),cover_rects)
     targets[j].p=Cover.move_circle(targets[j].p,-push,targets[j].radius(),cover_rects)
 
@@ -857,6 +860,16 @@ func run_smoke() -> void:
  assert(hunter.p.distance_to(prey)<before_distance-1.0)
  assert(hunter.heading.dot((prey-hunter.p).normalized())>0.9)
  assert(hunter.view_for((prey-hunter.p).normalized())==Mob.FRONT)
+ # Identical enemy positions must separate rather than remaining stacked forever.
+ start_game();mode="game"
+ targets[0].p=Vector2(0,50)
+ targets[1].p=Vector2(0,50)
+ update_enemies(0.016)
+ assert(targets[0].p.distance_to(targets[1].p)>0.001)
+ assert(not Cover.circle_overlaps(targets[0].p,targets[0].radius(),cover_rects))
+ assert(not Cover.circle_overlaps(targets[1].p,targets[1].radius(),cover_rects))
+ print("BLACK_SIGNAL_ENEMY_SEPARATION_OK: coincident enemies separate without entering cover")
+ start_game();mode="game"
  print("BLACK_SIGNAL_ENEMY_BEHAVIOR_OK: chase direction, facing and patrol collisions")
  print("BLACK_SIGNAL_COVER_SMOKE_OK: collision, sliding, hitscan and enemy cover")
  for i in range(ENEMY_COUNT):
