@@ -97,3 +97,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Added `tests/test_mission_record_validation.py` and push CI gate. Commits: `7fec57d`, `343e171`, `a034282`.
 - Acceptance: Python regression passes, Godot headless import/smoke succeeds, Android APK exports and emulator boots; explicitly inject corrupt ConfigFile records in emulator for end-to-end proof. **New CI and APK are not yet verified.** This is save integrity, not a visual improvement.
 - Next: inspect the latest Actions result, fix any failure, then prioritize authored directional character rigs/poses and motion capture; full campaign/audio/device QA remain blocked.
+
+### 2026-11-22 — Bound Chapter 01 replay completion counter
+- Repeated successful extraction now saturates `completed_runs` at 2,147,483,646, matching the persisted-record validator's accepted range, rather than incrementing indefinitely and eventually overflowing. Source commit `488a9f6`; regression `a9e0426` extends the existing push CI gate.
+- Acceptance: regression and Godot headless smoke pass, APK export and emulator launch pass, then test replay/save/reload on Android. **These execution results remain unverified at time of commit.** No new art or content is claimed.
+- Priority blockers: authored directional Rin/mob poses and shimmer; deeper campaign, UX/audio, device performance and physical Android testing.
