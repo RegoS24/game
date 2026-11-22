@@ -80,3 +80,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Push-triggered CI still runs atlas checks, Godot smoke, APK export/signature validation and Android emulator boot, and uploads the APK and screenshots as run artifacts. It no longer publishes a new GitHub Release for every code or documentation change; release publication is restricted to intentional `workflow_dispatch` runs (commit `345fc80d37600d6ffd75a6aa3676ef13405366d3`).
 - Acceptance: a push run finishes and exposes downloadable `BLACK-SIGNAL-HD2D-APK` artifact but does not create a release; a manually dispatched successful run creates a prerelease after emulator verification. Both must be verified in GitHub Actions; the current connector does not expose push-run status, so no success is claimed.
 - Blockers: inspect latest Actions logs and emulator screenshots; remove misleading stale promotional release-note claims; improve authored Rin/enemy directional poses and complete gameplay, accessibility, sound and real-device QA.
+
+### 2026-11-22 — Coincident enemy separation
+- Fixed combat crowd separation when two living enemies occupy exactly the same position. Previously the zero-length difference skipped the resolution entirely, leaving overlapping silhouettes and collision bodies; now a deterministic horizontal axis separates them through the existing cover-aware movement routine.
+- Added headless smoke assertion for identical enemy positions, positive separation and no penetration of cover. Code commit: `c4d2a2b9d9533dc21f11010ea9095846b90b876d`.
+- Acceptance: push CI headless smoke, Android export and emulator smoke succeed; verify enemies visually in a crowded encounter. This addresses coincident bodies, **not** authored 2D gait quality or shimmer.
+- Remaining blockers: approved directional Rin/enemy source poses or rig, full campaign, audio/UX, real-device performance and motion capture.
