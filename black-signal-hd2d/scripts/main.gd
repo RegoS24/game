@@ -891,9 +891,13 @@ func run_smoke() -> void:
   # testing a later attack; resetting cool alone must not bypass hit-stun.
   assert(unit.hit_stun>0.0 and unit.cool>=0.30)
   var close_target: Vector2=unit.p+Vector2(0,0.5)
-  for recovery_step in range(24):
+  # Wait for hit-stun, not for every archetype's initial attack cooldown.
+  # Guards and drones spawn with longer cooldowns than the 0.30s hit gate.
+  for recovery_step in range(12):
    assert(unit.update(.016,close_target,true)==0)
-  assert(unit.hit_stun==0.0 and unit.cool==0.0)
+  assert(unit.hit_stun==0.0 and unit.cool>0.0)
+  # Explicitly expire cooldown to isolate the attack transition under test.
+  unit.cool=0.0
   unit.set_clip(Mob.IDLE)
   unit.update(.016,close_target,true)
   assert(unit.clip==Mob.ATTACK)
