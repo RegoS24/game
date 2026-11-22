@@ -23,4 +23,12 @@ assert "int(cfg.get_value" not in load and "float(cfg.get_value" not in load
 assert load.index("typeof(raw_best)") < load.index("float(raw_best)")
 assert load.index("typeof(raw_runs)") < load.index("int(raw_runs)")
 assert "completed_runs=mini(completed_runs+1,2147483646)" in src, "Completion count must saturate before save to avoid integer overflow"
+
+# Persist via a staged sibling file; never write directly over the last valid record.
+save = src[src.index("func save_record() -> bool:"):src.index("\nfunc has_marker()", src.index("func save_record() -> bool:"))]
+assert 'var temp_path: String=SAVE_PATH+".tmp"' in save
+assert "cfg.save(temp_path)" in save
+assert "cfg.save(SAVE_PATH)" not in save
+assert save.index("cfg.save(temp_path)") < save.index("DirAccess.rename_absolute(")
+assert "if result!=OK:" in save and "DirAccess.remove_absolute(" in save
 print("BLACK_SIGNAL_MISSION_RECORD_VALIDATION_OK")
