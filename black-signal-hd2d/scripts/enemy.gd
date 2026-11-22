@@ -195,11 +195,19 @@ func source_rect(state: int,t: float) -> Rect2:
  var idx: int=state*FRAMES+frame_for(state,t)
  return Rect2(Vector2(float(idx%6)*FRAME_W,float(floori(float(idx)/6.0))*FRAME_H),Vector2(FRAME_W,FRAME_H))
 
+# Keep a small directional deadband so tiny camera/heading changes do not
+# rapidly alternate between distinct authored silhouettes at view boundaries.
+var last_view: int=SIDE
+
 func view_for(to_camera: Vector2) -> int:
+ if to_camera.length_squared()<0.000001:return last_view
  var alignment: float=heading.dot(to_camera.normalized())
- if alignment>0.36:return FRONT
- if alignment< -0.54:return BACK
- return SIDE
+ if last_view==FRONT and alignment>0.28:return FRONT
+ if last_view==BACK and alignment< -0.46:return BACK
+ if alignment>0.44:last_view=FRONT
+ elif alignment< -0.62:last_view=BACK
+ elif alignment<0.28 and alignment> -0.46:last_view=SIDE
+ return last_view
 
 func packed_rect(view: int,state: int,t: float) -> Rect2:
  var idx: int=0
