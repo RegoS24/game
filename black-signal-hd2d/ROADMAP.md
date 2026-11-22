@@ -91,3 +91,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Extraction now rejects negative, NaN and infinite elapsed times before changing completion count or personal best (`9937c90`). This prevents invalid mission timing from contaminating persistent progression.
 - Added source regression and push CI gate (`669b5cc`, `9810566`). Acceptance: source test and Godot smoke pass; Android export and emulator launch succeed. **CI and device results pending.**
 - Blockers: authored directional Rin/mob animation source, visible shimmer, full campaign/content, sound and physical Android QA. No claim of improved visual quality from this change.
+
+### 2026-11-22 — Validate persisted Chapter 01 mission records
+- `mission.gd::load_record()` now validates the ConfigFile Variant types before conversion: invalid best times (NaN, Infinity, negative, strings) reset to the unset sentinel, and invalid completion counters (negative, non-integer, excessively large) reset to zero. This prevents malformed saved records from poisoning results/HUD state or triggering invalid conversions.
+- Added `tests/test_mission_record_validation.py` and push CI gate. Commits: `7fec57d`, `343e171`, `a034282`.
+- Acceptance: Python regression passes, Godot headless import/smoke succeeds, Android APK exports and emulator boots; explicitly inject corrupt ConfigFile records in emulator for end-to-end proof. **New CI and APK are not yet verified.** This is save integrity, not a visual improvement.
+- Next: inspect the latest Actions result, fix any failure, then prioritize authored directional character rigs/poses and motion capture; full campaign/audio/device QA remain blocked.
