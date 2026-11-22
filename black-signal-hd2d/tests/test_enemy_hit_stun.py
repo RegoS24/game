@@ -9,6 +9,9 @@ assert "var hit_stun: float = 0.0" in source
 assert hit.index("if hp<=0:") < hit.index("hit_stun=HIT_STUN_DURATION")
 assert "hit_stun=0.0;set_clip(DEATH)" in hit
 assert "hit_stun=HIT_STUN_DURATION" in hit
+assert "cool=maxf(cool,0.30)" in hit
+assert hit.index("cool=maxf(cool,0.30)") < hit.index("if clip==ATTACK and not attack_done:")
+assert "cool=maxf(cool,0.45)" in hit
 assert "if clip==ATTACK and not attack_done:" in hit
 assert "if hit_stun>0.0:" in update
 assert "hit_stun=maxf(0.0,hit_stun-dt)" in update
