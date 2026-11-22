@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1] / "assets" / "mobs"
 OUT = Path(__file__).resolve().parents[1] / "artifacts" / "mob_motion_audit.json"
 MOBS = ("raider", "guard", "brute", "hacker", "hound", "drone")
 W, H, COLS, ROWS = 192, 224, 8, 16
+FRAME_COUNT = 126
+CLIP_LENGTH = 6
 
 
 def audit(name):
@@ -20,7 +22,7 @@ def audit(name):
             raise AssertionError(f"{name}: invalid atlas geometry or alpha")
         alpha = source.getchannel("A")
         frames = []
-        for i in range(COLS * ROWS):
+        for i in range(FRAME_COUNT):
             x, y = (i % COLS) * W, (i // COLS) * H
             mask = alpha.crop((x, y, x + W, y + H)).point(
                 lambda a: 255 if a > 85 else 0
@@ -40,22 +42,22 @@ def audit(name):
                                            reverse=True)[:10],
             "largest_area_changes": sorted(jumps, key=lambda j: j["area_ratio"],
                                             reverse=True)[:10],
-            "note": "Only compare adjacent frames within each 8-frame atlas row; row boundaries are excluded. Loop closure is reported separately.",
+            "note": "Only compare adjacent frames within each 6-frame authored clip; atlas row boundaries are irrelevant. Loop closure is reported separately.",
             "largest_loop_closure_jumps": sorted(measure_clip_jumps(frames, loop_only=True), key=lambda j: j["center_delta"], reverse=True)[:10]}
 
 
 def measure_clip_jumps(frames, loop_only=False):
-    """Measure one 8-frame row at a time; never compare unrelated clip rows."""
-    if len(frames) % COLS:
-        raise ValueError("frame count must be divisible by clip length")
+    """Measure 6-frame animation clips, not 8-column texture packing rows."""
+    if len(frames) % CLIP_LENGTH:
+        raise ValueError("frame count must be divisible by six-frame clip length")
     jumps = []
-    for start in range(0, len(frames), COLS):
-        pairs = [(start + COLS - 1, start)] if loop_only else [
-            (i - 1, i) for i in range(start + 1, start + COLS)
+    for start in range(0, len(frames), CLIP_LENGTH):
+        pairs = [(start + CLIP_LENGTH - 1, start)] if loop_only else [
+            (i - 1, i) for i in range(start + 1, start + CLIP_LENGTH)
         ]
         for left, right in pairs:
             a, b = frames[left], frames[right]
-            jumps.append({"from": left, "to": right, "row": start // COLS,
+            jumps.append({"from": left, "to": right, "clip": start // CLIP_LENGTH,
                           "center_delta": round(sum((a["center"][k] - b["center"][k]) ** 2
                                                     for k in range(2)) ** .5, 2),
                           "area_ratio": round(max(a["area"], b["area"]) /
