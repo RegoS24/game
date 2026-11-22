@@ -102,3 +102,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Repeated successful extraction now saturates `completed_runs` at 2,147,483,646, matching the persisted-record validator's accepted range, rather than incrementing indefinitely and eventually overflowing. Source commit `488a9f6`; regression `a9e0426` extends the existing push CI gate.
 - Acceptance: regression and Godot headless smoke pass, APK export and emulator launch pass, then test replay/save/reload on Android. **These execution results remain unverified at time of commit.** No new art or content is claimed.
 - Priority blockers: authored directional Rin/mob poses and shimmer; deeper campaign, UX/audio, device performance and physical Android testing.
+
+### 2026-11-22 — Missing/corrupt mission record reload
+- `mission.gd::load_record()` now clears in-memory personal-best and completion counters **before** loading the ConfigFile. Missing/unreadable files previously returned early and could retain stale values from an earlier load in the same process. Commits `c97dfe3`, `93b31aa`.
+- Acceptance: source regression verifies both resets precede the early return; push CI passes Godot headless smoke, Android export and emulator launch. **CI and real-device results pending.** No animation or visual quality improvement claimed.
+- Next: verify Actions/artifacts, replace warped directional source poses or implement a validated 2D rig, then continue campaign, audio and performance work.
