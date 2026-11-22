@@ -17,4 +17,5 @@ for token in (
 assert "int(cfg.get_value" not in load and "float(cfg.get_value" not in load
 assert load.index("typeof(raw_best)") < load.index("float(raw_best)")
 assert load.index("typeof(raw_runs)") < load.index("int(raw_runs)")
+assert "completed_runs=mini(completed_runs+1,2147483646)" in src, "Completion count must saturate before save to avoid integer overflow"
 print("BLACK_SIGNAL_MISSION_RECORD_VALIDATION_OK")
