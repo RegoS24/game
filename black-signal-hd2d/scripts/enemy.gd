@@ -93,6 +93,9 @@ func take_hit() -> bool:
  # A nonlethal shot briefly stops pursuit, making hits readable and giving
  # the player a genuine repositioning window, without extending attack range.
  hit_stun=HIT_STUN_DURATION
+ # Preserve a short post-hit recovery even when an idle enemy's attack
+ # cooldown was already zero. A stagger should never end in an instant hit.
+ cool=maxf(cool,0.30)
  # A confirmed shot interrupts an uncommitted windup. Once the active frame
  # has fired, damage cannot be undone; cooldown still prevents an instant retry.
  if clip==ATTACK and not attack_done:
