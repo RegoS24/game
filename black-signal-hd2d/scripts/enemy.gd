@@ -109,12 +109,15 @@ func update(dt: float, player: Vector2, player_alive: bool, obstacles: Array[Rec
  if distance<22.0:activated=true
  elif distance>39.0:activated=false
  if clip==ATTACK:
-  if distance>0.01:heading=rel.normalized()
+  # Lock facing during the telegraph: players can evade by sidestepping.
+  # Do not rotate the attack sprite to track a moving target after windup.
   var damage: int=0
   # Telegraph first; the attack deals damage exactly once at its active frame.
   if time>=float(DURATIONS[ATTACK])*0.48 and not attack_done:
    attack_done=true;attack_flash=0.13
-   if distance<=reach+0.65 and not blocked:damage=int(STATS[kind][4])
+   # A target behind the committed strike direction cannot be hit.
+   var facing_target: bool=distance>0.001 and heading.dot(rel.normalized())>=0.5
+   if distance<=reach+0.65 and not blocked and facing_target:damage=int(STATS[kind][4])
   if time>=float(DURATIONS[ATTACK]):
    cool=float(STATS[kind][5]);set_clip(IDLE)
   return damage
