@@ -16,14 +16,16 @@ func begin() -> void:
  mission_elapsed=0.0
 
 func load_record() -> void:
+ # Reset in-memory records even when the file is missing or unreadable.
+ # Otherwise a failed reload can leave stale progress from a previous session.
+ best_seconds=-1.0
+ completed_runs=0
  var cfg:=ConfigFile.new()
  if cfg.load(SAVE_PATH)!=OK:return
  # Treat the record as untrusted: corrupt or edited ConfigFile values must not
  # become NaN/Infinity, negative counts, or invalid numeric conversions.
  var raw_best: Variant=cfg.get_value("chapter01","best_seconds",-1.0)
  var raw_runs: Variant=cfg.get_value("chapter01","completed_runs",0)
- best_seconds=-1.0
- completed_runs=0
  if typeof(raw_best)==TYPE_FLOAT or typeof(raw_best)==TYPE_INT:
   var candidate: float=float(raw_best)
   if is_finite(candidate) and candidate>=0.0:best_seconds=candidate
