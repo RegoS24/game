@@ -881,6 +881,13 @@ func run_smoke() -> void:
   assert(unit.view_for(Vector2(0,-1))==Mob.FRONT)
   assert(unit.view_for(Vector2(1,0))==Mob.SIDE)
   assert(unit.view_for(Vector2(0,1))==Mob.BACK)
+  # Directional atlas selection must not flicker near the back/side threshold.
+  unit.heading=Vector2(0,-1)
+  assert(unit.view_for(Vector2(0,1))==Mob.BACK)
+  assert(unit.view_for(Vector2(0.85,0.53))==Mob.BACK)
+  assert(unit.view_for(Vector2(1,0))==Mob.SIDE)
+  assert(unit.view_for(Vector2(0.85,0.53))==Mob.SIDE)
+  assert(unit.view_for(Vector2(0,1))==Mob.BACK)
   assert(unit.packed_rect(Mob.BACK,Mob.RUN,.5).end.y<=3584.0)
   assert(unit.packed_rect(Mob.FRONT,5,.2).end.y<=3584.0)
   assert(unit.frame_for(Mob.DEATH,9.0)==17)
