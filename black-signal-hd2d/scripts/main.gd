@@ -887,9 +887,15 @@ func run_smoke() -> void:
   assert(unit.packed_rect(Mob.FRONT,Mob.DEATH,9.0).end.y<=3584.0)
   var old_hp: int=unit.hp
   assert(unit.take_hit()==false and unit.hp==old_hp-1)
+  # A hit now applies stun and a recovery gate. Exercise that contract before
+  # testing a later attack; resetting cool alone must not bypass hit-stun.
+  assert(unit.hit_stun>0.0 and unit.cool>=0.30)
+  var close_target: Vector2=unit.p+Vector2(0,0.5)
+  for recovery_step in range(24):
+   assert(unit.update(.016,close_target,true)==0)
+  assert(unit.hit_stun==0.0 and unit.cool==0.0)
   unit.set_clip(Mob.IDLE)
-  unit.cool=0.0
-  unit.update(.016,unit.p+Vector2(0,0.5),true)
+  unit.update(.016,close_target,true)
   assert(unit.clip==Mob.ATTACK)
   var damage: int=0
   for n in range(90):damage+=unit.update(.016,unit.p+Vector2(0,0.5),true)
