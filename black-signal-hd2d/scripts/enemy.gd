@@ -88,6 +88,11 @@ func take_hit() -> bool:
  hp-=1;hit_flash=HIT_DURATION;activated=true
  if hp<=0:
   hp=0;set_clip(DEATH);return true
+ # A confirmed shot interrupts an uncommitted windup. Once the active frame
+ # has fired, damage cannot be undone; cooldown still prevents an instant retry.
+ if clip==ATTACK and not attack_done:
+  set_clip(IDLE)
+  cool=maxf(cool,0.45)
  return false
 
 func update(dt: float, player: Vector2, player_alive: bool, obstacles: Array[Rect2]=[]) -> int:
