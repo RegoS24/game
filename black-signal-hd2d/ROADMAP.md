@@ -64,3 +64,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Updated audit to inspect 126 populated frames and compare actual 21 six-frame clips rather than eight-column texture rows; updated metric regression for clip boundaries and loop closures.
 - Acceptance: motion regression passes, all six generated atlases pass 126-frame audit, Godot smoke and Android export complete, then review actual motion captures. CI results for these commits pending.
 - Blockers: no new verified APK; visual quality and physical-device validation outstanding; original pose/rig quality remains unresolved.
+
+### 2026-11-22 — Enemy locomotion phase boundary
+- Fixed a negative animation-phase wrap in `scripts/enemy.gd`: when WALK/RUN starts at time zero and actual movement is slower than requested (cover or short steps), subtracting unused frame time could send the phase below zero; the subsequent modulo jumped to the last animation frame. Phase now clamps at zero before wrapping, preventing this specific source of footfall popping.
+- Source patch: `28f0c623525ee2003a6b01beb9b57016af6732fb`. **Not yet validated by a completed new CI run, APK or physical Android motion capture.**
+- Acceptance: headless movement tests pass, Android build passes, then visually compare first steps and slow obstacle movement at 30/60 FPS; do not claim this repairs authored poses or texture shimmer.
+- Blockers: verify latest Actions run after prior #70 atlas failure, improve authored directional Rin/enemy art, complete campaign/UX/audio and real-device performance QA.
