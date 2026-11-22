@@ -62,7 +62,7 @@ func interact(player: Vector2,kills: int,elapsed: float,persist: bool=true) -> S
  if phase==Phase.EXTRACT and kills>=REQUIRED_KILLS:
   phase=Phase.COMPLETE
   mission_elapsed=maxf(0.0,elapsed)
-  completed_runs+=1
+  completed_runs=mini(completed_runs+1,2147483646)
   if best_seconds<0.0 or mission_elapsed<best_seconds:best_seconds=mission_elapsed
   if persist and not save_record():return "ЭВАКУАЦИЯ ВЫПОЛНЕНА — ПРОГРЕСС НЕ СОХРАНЁН"
   return "МИССИЯ ЗАВЕРШЕНА"
