@@ -127,3 +127,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - `mission.gd::save_record()` now removes a partially written sibling `.tmp` when `ConfigFile.save()` fails; the existing cleanup on rename failure is retained. Commits `0137b7a`, `54bcb95`.
 - Existing `tests/test_mission_record_validation.py` now asserts both failure paths remove the staging file before returning. Acceptance: Python regression passes in push CI, Godot headless and Android export pass, then interrupted/low-storage write behavior is verified on an actual Android device. **CI and device outcomes not yet confirmed.**
 - Priority blockers unchanged: authored directional Rin/enemy animation rigs and shimmer, combat feel, mission/level depth, sound and release QA.
+
+### 2026-11-23 — Cover-aware enemy pursuit inside attack range
+- Fixed an AI standoff deadlock: when cover obstructed the player inside an enemy's normal weapon range, the enemy could request zero movement and never reach a flanking route. Blocked enemies now approach cover rather than maintaining the unobstructed firing distance; the existing cover collision and flank steering remain in effect.
+- Added `tests/test_enemy_cover_flank.py` and a push-triggered workflow step. Commits `d6adb52`, `aba180c`, `7650443`.
+- Acceptance: regression, headless Godot smoke, Android export and emulator launch all pass; inspect real encounters to ensure enemies do not walk through cover or oscillate near crates. **CI and physical Android results not yet verified.**
+- Remaining blockers: authored Rin/enemy directional 2D rigs and shimmer, more missions/content, audio, accessibility and real-device performance QA.
