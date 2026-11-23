@@ -63,6 +63,14 @@ func objective_distance(player: Vector2) -> float:
  if not has_marker():return -1.0
  return player.distance_to(marker_position())
 
+# Signed bearing in radians relative to the player's forward direction.
+# Positive means target is to the player's right; no cue during combat/completion.
+func objective_bearing(player: Vector2, facing: Vector2) -> float:
+ if not has_marker() or facing.length_squared()<0.0001:return 0.0
+ var to_target: Vector2=marker_position()-player
+ if to_target.length_squared()<0.0001:return 0.0
+ return atan2(facing.cross(to_target),facing.dot(to_target))
+
 func register_kills(count: int) -> bool:
  if phase==Phase.ELIMINATE and count>=REQUIRED_KILLS:
   phase=Phase.EXTRACT
