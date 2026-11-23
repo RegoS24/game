@@ -1021,6 +1021,11 @@ func run_smoke() -> void:
  invalid_probe=probe.duplicate(true)
  invalid_probe["enemies"][0]["hp"]=1.5
  assert(not Checkpoint.validate(invalid_probe))
+ # A save must not resurrect any mob above its own archetype HP cap.
+ for enemy_kind in range(ENEMY_COUNT):
+  invalid_probe=probe.duplicate(true)
+  invalid_probe["enemies"][enemy_kind]["hp"]=int(Mob.STATS[enemy_kind][0])+1
+  assert(not Checkpoint.validate(invalid_probe))
  invalid_probe=probe.duplicate(true)
  invalid_probe["ammo"]=INF
  assert(not Checkpoint.validate(invalid_probe))
