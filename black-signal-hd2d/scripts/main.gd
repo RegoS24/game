@@ -497,7 +497,7 @@ func _input(event: InputEvent) -> void:
 func press_at(p: Vector2,id: int) -> void:
  if mode=="paused":
   if Rect2(460,410,360,72).has_point(p) or Rect2(action_rects["pause"]).has_point(p):toggle_pause()
-  elif Rect2(action_rects["back"]).has_point(p):save_checkpoint();mode="lobby"
+  elif Rect2(action_rects["back"]).has_point(p):activate("back")
   return
  if mode=="defeat" or mode=="victory":
   if Rect2(460,410,360,72).has_point(p):start_game()
@@ -1113,5 +1113,13 @@ func run_smoke() -> void:
  assert(mode=="lobby" and not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)
  assert(touch_joy==Vector2.ZERO and motion==Vector2.ZERO and not sprint_latch)
  print("BLACK_SIGNAL_LOBBY_INPUT_SMOKE_OK: no held combat controls after exit")
+ # Paused touch navigation must share the same cleanup path as keyboard/back.
+ start_game();mode="game"
+ toggle_pause()
+ shoot_hold=true;fire_id=17;joy_id=18;aim_id=19;touch_joy=Vector2.ONE;motion=Vector2.ONE;sprint_latch=true
+ press_at(Vector2(40,34),20)
+ assert(mode=="lobby" and not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)
+ assert(touch_joy==Vector2.ZERO and motion==Vector2.ZERO and not sprint_latch)
+ print("BLACK_SIGNAL_PAUSED_TOUCH_EXIT_OK: touch lobby exit releases controls")
  print("BLACK_SIGNAL_SMOKE_OK: six scaled front/side/rear mobs + front hit reaction + vertical aim and gyro; pure 2D")
  get_tree().quit()
