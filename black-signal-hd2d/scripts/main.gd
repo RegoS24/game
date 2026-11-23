@@ -734,7 +734,9 @@ func draw_hud() -> void:
  panel(Rect2(151,16,228,74));text_at(Vector2(165,41),"RIN  /  SECTOR 07",19,GOLD);text_at(Vector2(165,65),"Мобы: "+str(kills)+" / "+str(ENEMY_COUNT),17,CYAN)
  panel(Rect2(380,120,503,61))
  text_at(Vector2(394,147),mission.objective_text(kills),16,CYAN)
- text_at(Vector2(394,169),"Время: %.1f с   •   Лучшее: %s"%[battle_time,"—" if mission.best_seconds<0 else "%.1f с"%mission.best_seconds],13,GOLD)
+ var objective_meters: float=mission.objective_distance(pos)
+ var objective_hint: String="   •   Цель: %d м"%ceili(objective_meters) if objective_meters>=0.0 else ""
+ text_at(Vector2(394,169),"Время: %.1f с%s"%[battle_time,objective_hint],13,GOLD)
  var deg: int=posmod(int(rad_to_deg(yaw)),360);text_at(Vector2(575,35),"N  ·  %03d°"%deg,20,GOLD);draw_line(Vector2(460,47),Vector2(820,47),Color(0.8,0.8,0.86,.6),1)
  panel(Rect2(1110,16,144,130));text_at(Vector2(1120,37),"СЕКТОР 07",14,GOLD);draw_rect(Rect2(1154,46,55,90),Color("354257"));draw_line(Vector2(1181,46),Vector2(1181,136),Color("808d9d"),1)
  for t in targets:
@@ -774,6 +776,17 @@ func run_smoke() -> void:
  assert(apply_enemy_damage(8) and player_hp==80)
  start_game();mode="game"
  assert(damage_grace==0.0 and player_hp==100)
+ # Navigation must track the active objective, never a stale terminal marker.
+ var navigation=Mission.new()
+ assert(is_equal_approx(navigation.objective_distance(Mission.TERMINAL),0.0))
+ assert(navigation.objective_distance(Mission.EXFIL)>100.0)
+ navigation.phase=Mission.Phase.ELIMINATE
+ assert(navigation.objective_distance(Mission.TERMINAL)<0.0)
+ navigation.phase=Mission.Phase.EXTRACT
+ assert(is_equal_approx(navigation.objective_distance(Mission.EXFIL),0.0))
+ navigation.phase=Mission.Phase.COMPLETE
+ assert(navigation.objective_distance(Mission.EXFIL)<0.0)
+ print("BLACK_SIGNAL_OBJECTIVE_NAV_OK: scan and extraction markers follow mission phase")
  print("BLACK_SIGNAL_DAMAGE_GRACE_OK: overlapping attacks cannot stack instantly")
  anim.tick(.03,1.0,false)
  assert(anim.clip=="walk")
