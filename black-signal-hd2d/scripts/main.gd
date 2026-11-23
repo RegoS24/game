@@ -739,9 +739,9 @@ func draw_hud() -> void:
  if objective_meters>=0.0:
   var bearing: float=mission.objective_bearing(pos,forward)
   var direction: String="ПРЯМО"
-  if bearing>0.35:direction="ВПРАВО"
+  if absf(bearing)>2.75:direction="НАЗАД"
+  elif bearing>0.35:direction="ВПРАВО"
   elif bearing< -0.35:direction="ВЛЕВО"
-  elif absf(bearing)>2.75:direction="НАЗАД"
   objective_hint="   •   Цель: %d м / %s"%[ceili(objective_meters),direction]
  text_at(Vector2(394,169),"Время: %.1f с%s"%[battle_time,objective_hint],13,GOLD)
  var deg: int=posmod(int(rad_to_deg(yaw)),360);text_at(Vector2(575,35),"N  ·  %03d°"%deg,20,GOLD);draw_line(Vector2(460,47),Vector2(820,47),Color(0.8,0.8,0.86,.6),1)
