@@ -429,7 +429,7 @@ func _notification(what: int) -> void:
 
 func toggle_pause() -> void:
  if mode=="game":
-  mode="paused";shoot_hold=false;fire_id=-1;touch_joy=Vector2.ZERO;joy_id=-1;aim_id=-1;motion=Vector2.ZERO
+  mode="paused";shoot_hold=false;fire_id=-1;touch_joy=Vector2.ZERO;joy_id=-1;aim_id=-1;motion=Vector2.ZERO;sprint_latch=false
   save_checkpoint()
  elif mode=="paused":
   mode="game";begin_gyro_calibration()
@@ -949,7 +949,7 @@ func run_smoke() -> void:
  assert(used_med_stations.is_empty() and player_hp==100)
  print("BLACK_SIGNAL_MEDICAL_SMOKE_OK: proximity, single use, HP cap and run reset")
  # Pause must freeze the combat state and clear held touch controls.
- mode="game";touch_joy=Vector2(0.8,0.2);shoot_hold=true;fire_id=2;joy_id=1;aim_id=3;motion=Vector2(1,0)
+ mode="game";touch_joy=Vector2(0.8,0.2);shoot_hold=true;fire_id=2;joy_id=1;aim_id=3;motion=Vector2(1,0);sprint_latch=true
  var pause_hp: int=player_hp
  var pause_pos: Vector2=pos
  var pause_ammo: int=ammo
@@ -957,6 +957,7 @@ func run_smoke() -> void:
  toggle_pause()
  assert(mode=="paused" and not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)
  assert(touch_joy==Vector2.ZERO and motion==Vector2.ZERO)
+ assert(not sprint_latch) # Resume must not inherit sprint toggled before suspension.
  _process(0.1)
  assert(player_hp==pause_hp and pos==pause_pos and ammo==pause_ammo and battle_time==pause_time)
  toggle_pause()
