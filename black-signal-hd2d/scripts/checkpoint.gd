@@ -53,7 +53,10 @@ static func validate(data: Variant) -> bool:
   if absf(float(p[0]))>6.0 or absf(float(p[1]))>250.0:return false
   if typeof(enemy.get("hp",null))!=TYPE_INT and typeof(enemy.get("hp",null))!=TYPE_FLOAT:return false
   if not is_finite(float(enemy["hp"])) or float(enemy["hp"])!=float(int(enemy["hp"])):return false
-  if int(enemy["hp"])<0 or int(enemy["hp"])>8:return false
+  # Each archetype has a different maximum HP. Reject edited/corrupt saves
+  # that would restore enemies stronger than their authored combat stats.
+  var max_enemy_hp: int=int([3,4,8,3,3,4][i])
+  if int(enemy["hp"])<0 or int(enemy["hp"])>max_enemy_hp:return false
   if int(enemy["hp"])==0:dead+=1
  if dead!=int(data["kills"]):return false
  return true
