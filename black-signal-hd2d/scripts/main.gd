@@ -326,7 +326,10 @@ func apply_enemy_damage(amount: int) -> bool:
  damage_grace=DAMAGE_GRACE
  if player_hp==0:
   Checkpoint.clear();checkpoint_available=false
-  # Death must release every held pointer and movement latch before restart.\n  shoot_hold=false;fire_id=-1;joy_id=-1;aim_id=-1\n  touch_joy=Vector2.ZERO;motion=Vector2.ZERO;sprint_latch=false\n  mode="defeat"
+  # Death must release every held pointer and movement latch before restart.
+  shoot_hold=false;fire_id=-1;joy_id=-1;aim_id=-1
+  touch_joy=Vector2.ZERO;motion=Vector2.ZERO;sprint_latch=false
+  mode="defeat"
   announce("РИН ВЫВЕДЕНА ИЗ БОЯ")
  return true
 
@@ -783,7 +786,18 @@ func run_smoke() -> void:
  assert(apply_enemy_damage(8) and player_hp==80)
  start_game();mode="game"
  assert(damage_grace==0.0 and player_hp==100)
- # A lethal hit must not leak touch controls or sprint into defeat/restart.\n start_game();mode="game"\n player_hp=7;damage_grace=0.0\n shoot_hold=true;fire_id=4;joy_id=5;aim_id=6\n touch_joy=Vector2(0.6,0.8);motion=Vector2(1,0);sprint_latch=true\n assert(apply_enemy_damage(7) and mode=="defeat" and player_hp==0)\n assert(not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)\n assert(touch_joy==Vector2.ZERO and motion==Vector2.ZERO and not sprint_latch)\n start_game();mode="game"\n assert(player_hp==100 and not shoot_hold and not sprint_latch)\n print("BLACK_SIGNAL_DEFEAT_INPUT_OK: lethal hit clears held controls before restart")\n # Navigation must track the active objective, never a stale terminal marker.
+ # A lethal hit must not leak touch controls or sprint into defeat/restart.
+ start_game();mode="game"
+ player_hp=7;damage_grace=0.0
+ shoot_hold=true;fire_id=4;joy_id=5;aim_id=6
+ touch_joy=Vector2(0.6,0.8);motion=Vector2(1,0);sprint_latch=true
+ assert(apply_enemy_damage(7) and mode=="defeat" and player_hp==0)
+ assert(not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)
+ assert(touch_joy==Vector2.ZERO and motion==Vector2.ZERO and not sprint_latch)
+ start_game();mode="game"
+ assert(player_hp==100 and not shoot_hold and not sprint_latch)
+ print("BLACK_SIGNAL_DEFEAT_INPUT_OK: lethal hit clears held controls before restart")
+ # Navigation must track the active objective, never a stale terminal marker.
  var navigation=Mission.new()
  assert(is_equal_approx(navigation.objective_distance(Mission.TERMINAL),0.0))
  assert(navigation.objective_distance(Mission.EXFIL)>100.0)
