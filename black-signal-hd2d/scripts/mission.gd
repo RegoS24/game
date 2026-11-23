@@ -69,7 +69,7 @@ func objective_bearing(player: Vector2, facing: Vector2) -> float:
  if not has_marker() or facing.length_squared()<0.0001:return 0.0
  var to_target: Vector2=marker_position()-player
  if to_target.length_squared()<0.0001:return 0.0
- return atan2(facing.cross(to_target),facing.dot(to_target))
+ return atan2(-facing.cross(to_target),facing.dot(to_target))
 
 func register_kills(count: int) -> bool:
  if phase==Phase.ELIMINATE and count>=REQUIRED_KILLS:
