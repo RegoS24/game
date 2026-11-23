@@ -457,7 +457,7 @@ func activate(key: String) -> void:
   "interact": interact_mission()
   "back":
    if mode=="game" or mode=="paused":save_checkpoint()
-   mode="lobby";shoot_hold=false;touch_joy=Vector2.ZERO
+   mode="lobby";shoot_hold=false;fire_id=-1;joy_id=-1;aim_id=-1;touch_joy=Vector2.ZERO;motion=Vector2.ZERO;sprint_latch=false
 
 func _input(event: InputEvent) -> void:
  if event is InputEventKey and event.pressed and not event.echo:
@@ -1107,5 +1107,11 @@ func run_smoke() -> void:
  assert(pitch_target>0.0 and yaw_target>0.0)
  pitch_target=0.0;yaw_target=0.0;gyro_rate=Vector2.ZERO
  fire();assert(ammo==11 and targets[0].hp==targets[0].max_hp-1)
+ # Leaving active combat must not leak a held touch or sprint into the lobby.
+ mode="game";shoot_hold=true;fire_id=7;joy_id=8;aim_id=9;touch_joy=Vector2.ONE;motion=Vector2.ONE;sprint_latch=true
+ activate("back")
+ assert(mode=="lobby" and not shoot_hold and fire_id==-1 and joy_id==-1 and aim_id==-1)
+ assert(touch_joy==Vector2.ZERO and motion==Vector2.ZERO and not sprint_latch)
+ print("BLACK_SIGNAL_LOBBY_INPUT_SMOKE_OK: no held combat controls after exit")
  print("BLACK_SIGNAL_SMOKE_OK: six scaled front/side/rear mobs + front hit reaction + vertical aim and gyro; pure 2D")
  get_tree().quit()
