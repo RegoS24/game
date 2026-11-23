@@ -70,8 +70,14 @@ static func write(data: Dictionary,path: String=SAVE_PATH) -> bool:
  file.flush()
  var failed: bool=file.get_error()!=OK
  file.close()
- if failed:return false
- return DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp),ProjectSettings.globalize_path(path))==OK
+ if failed:
+  DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+  return false
+ var result: Error=DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp),ProjectSettings.globalize_path(path))
+ if result!=OK:
+  DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+  return false
+ return true
 
 static func read(path: String=SAVE_PATH) -> Dictionary:
  if not FileAccess.file_exists(path):return {}
@@ -91,3 +97,7 @@ static func read(path: String=SAVE_PATH) -> Dictionary:
 
 static func clear(path: String=SAVE_PATH) -> void:
  if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+ # A crashed/interrupted save can leave staging data behind; never treat it as
+ # a checkpoint, and remove it when the player explicitly clears progress.
+ var tmp: String=path+".tmp"
+ if FileAccess.file_exists(tmp):DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
