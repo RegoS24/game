@@ -27,6 +27,10 @@ static func validate(data: Variant) -> bool:
  if int(data["hp"])<1 or int(data["hp"])>100:return false
  if int(data["ammo"])<0 or int(data["ammo"])>12 or int(data["reserve"])<0 or int(data["reserve"])>9999:return false
  if int(data["kills"])<0 or int(data["kills"])>6 or int(data["phase"])<0 or int(data["phase"])>2:return false
+ # Phase and kill count must describe a reachable mission state. Otherwise
+ # resuming can strand the player in a completed firefight without extraction.
+ if int(data["phase"])==2 and int(data["kills"])!=6:return false
+ if int(data["phase"])==1 and int(data["kills"])==6:return false
  var stations: Variant=data.get("stations",[])
  if typeof(stations)!=TYPE_ARRAY or stations.size()>3:return false
  var unique_stations: Dictionary={}
