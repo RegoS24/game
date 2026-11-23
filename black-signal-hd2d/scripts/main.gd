@@ -272,13 +272,6 @@ func update_camera() -> void:
  right = Vector2(cos(yaw),-sin(yaw))
  camera = pos-forward*4.3-right*0.58
 
-# Android may suspend the process without a menu tap. Persist a checkpoint and
-# release held controls before the app loses focus, so resuming never fires or
-# moves Rin unexpectedly. Keep the game paused until the player resumes it.
-func _notification(what: int) -> void:
- if what==NOTIFICATION_APPLICATION_PAUSED or what==NOTIFICATION_WM_WINDOW_FOCUS_OUT:
-  if mode=="game":toggle_pause()
-
 func _process(dt: float) -> void:
  clock += dt
  if mode == "loading":
