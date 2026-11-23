@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Lethal damage releases held fire, joystick and aim pointers, movement and sprint before defeat; added smoke coverage for held controls and restart. Commit `a7d61ffa`. Acceptance: headless Godot smoke, Android export, emulator and real touchscreen defeat-to-restart check. **CI and device results unverified.** Authored 2D rig, shimmer, campaign and audio remain blockers.
+
 - 2026-11-23: Mission HUD now displays signed relative direction (ПРЯМО/ВЛЕВО/ВПРАВО/НАЗАД) alongside distance, using a phase-aware bearing helper; smoke assertions cover forward, left, right, and hidden combat cues. Commits `ca8403d8`, `8d001aea`. Acceptance: headless Godot smoke and Android export, then 1280×720 screenshot for HUD clipping and touchscreen navigation review. **Source updated; CI and Android runtime unverified.** Authored 2D rig, shimmer, content, audio, device QA remain blockers.
 
 - 2026-11-23: Mission navigation now shows live world-space distance to the active scan terminal or extraction point; combat phase and completed missions show no misleading distance. Added phase-transition assertions to existing headless gameplay smoke. Commits `09a09c00`, `3c2da40e`. Acceptance: headless Godot smoke, Android export and actual 1280×720 HUD screenshot confirming text legibility and non-overlap. **Source updated; CI, APK and device validation pending.** Art quality, shimmer, authored animation, broader campaign and audio remain blocked.
