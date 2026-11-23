@@ -22,6 +22,10 @@ jobs:
       - name: Compile Python regression scripts
         working-directory: black-signal-hd2d
         run: python3 -m compileall -q tests
+      - name: Reject duplicate GDScript methods
+        run: python3 black-signal-hd2d/tests/test_gdscript_duplicate_methods.py
+      - name: Validate Android lifecycle regression
+        run: python3 black-signal-hd2d/tests/test_android_lifecycle.py
       - name: Reject escaped GDScript newlines
         working-directory: black-signal-hd2d
         run: python3 tests/test_escaped_newlines.py
