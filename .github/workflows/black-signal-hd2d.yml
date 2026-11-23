@@ -54,6 +54,8 @@ jobs:
         run: python3 black-signal-hd2d/tests/test_mission_elapsed_guard.py
       - name: Validate committed enemy attack direction
         run: python3 black-signal-hd2d/tests/test_enemy_attack_commitment.py
+      - name: Validate stable enemy side-view mirroring
+        run: python3 black-signal-hd2d/tests/test_enemy_side_mirror.py
       - name: Validate enemy hit interruption
         run: python3 black-signal-hd2d/tests/test_enemy_hit_interrupt.py
       - name: Validate nonlethal enemy hit-stun
