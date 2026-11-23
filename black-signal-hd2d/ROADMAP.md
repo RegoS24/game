@@ -19,6 +19,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Fast push guard now executes duplicate GDScript method and Android lifecycle regressions, in addition to Python compileall and escaped-newline check (commit `688f195b`). Previous source guard run #45263756807 and native build #45253422635 passed. Acceptance: new source guard run succeeds on this commit; next native build verifies Godot import, gameplay smoke, APK export and emulator. No art or gameplay change; authored 2D poses/shimmer, campaign content, audio and device QA remain open.
+
+
 - 2026-11-23: Added independent, lightweight GitHub Actions source-regression workflow `.github/workflows/black-signal-source-guard.yml` (commit `852885d0`). Runs `python3 tests/test_escaped_newlines.py` on GDScript/test changes pushed to `black-signal-hd2d`, PRs and manual dispatch, with read-only permissions. Acceptance: Actions job succeeds on branch head; a deliberately escaped statement in a disposable test branch fails the guard. **Workflow committed and source re-read; GitHub Actions outcome not yet confirmed.** Existing Android export/emulator and Godot smoke remain separate gates. No new gameplay, art, or APK from this change.
 
 - 2026-11-23: **Parser-blocking regression repaired:** previous defeat-control edit accidentally embedded literal `\\n` sequences in `scripts/main.gd` executable code and smoke assertions. Converted all 14 literal sequences to real line breaks (commit `d3438bc0`); added `tests/test_escaped_newlines.py` guard (commit `23a6df98`). Acceptance: run `python3 tests/test_escaped_newlines.py`, Godot headless import and gameplay smoke, Android export and emulator boot on latest head. **Source corrected; CI/device validation pending.** Prioritize CI wiring for guard and verify before any new APK. Authored 2D poses/shimmer and full game scope remain blocked.
