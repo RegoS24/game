@@ -3,14 +3,9 @@ name: BLACK SIGNAL source regression guard
 on:
   push:
     branches: [black-signal-hd2d]
-    paths:
-      - 'black-signal-hd2d/**/*.gd'
-      - 'black-signal-hd2d/tests/**/*.py'
-      - '.github/workflows/black-signal-source-guard.yml'
   pull_request:
     paths:
-      - 'black-signal-hd2d/**/*.gd'
-      - 'black-signal-hd2d/tests/**/*.py'
+      - 'black-signal-hd2d/**'
       - '.github/workflows/black-signal-source-guard.yml'
   workflow_dispatch:
 
@@ -19,11 +14,14 @@ permissions:
 
 jobs:
   source-regression:
-    name: Reject escaped GDScript newlines
+    name: Validate GDScript source and Python test syntax
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Python source guard
+      - name: Compile Python regression scripts
+        working-directory: black-signal-hd2d
+        run: python3 -m compileall -q tests
+      - name: Reject escaped GDScript newlines
         working-directory: black-signal-hd2d
         run: python3 tests/test_escaped_newlines.py
