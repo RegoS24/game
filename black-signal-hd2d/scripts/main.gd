@@ -69,6 +69,9 @@ const MED_HEAL: int=35
 var used_med_stations: Dictionary={}
 var player_hp: int = 100
 var player_hurt: float = 0.0
+# Prevent several overlapping enemies from deleting the entire health bar in one instant.
+const DAMAGE_GRACE: float = 0.45
+var damage_grace: float = 0.0
 var encounter_clear: bool = false
 var battle_time: float = 0.0
 const ENEMY_COUNT: int = 6
@@ -124,7 +127,7 @@ func start_game() -> void:
  begin_gyro_calibration()
  anim = Animator.new(); touch_joy = Vector2.ZERO; joy_id = -1; aim_id = -1
  kills = 0; ammo = 12; reserve = 108; reload_time = 0.0; shoot_hold = false
- player_hp=100;player_hurt=0.0;encounter_clear=false;battle_time=0.0
+ player_hp=100;player_hurt=0.0;damage_grace=0.0;encounter_clear=false;battle_time=0.0
  mission.begin()
  sprint_latch = false; fire_id = -1; shot_cool = 0.0; shot_flash = 0.0
  build_world(); update_camera()
@@ -170,7 +173,7 @@ func resume_checkpoint() -> bool:
    mob.time=float(Mob.DURATIONS[Mob.DEATH])
   else:mob.set_clip(Mob.IDLE)
  anim=Animator.new()
- reload_time=0.0;shot_cool=0.0;shot_flash=0.0;player_hurt=0.0
+ reload_time=0.0;shot_cool=0.0;shot_flash=0.0;player_hurt=0.0;damage_grace=0.0
  shoot_hold=false;fire_id=-1;joy_id=-1;aim_id=-1;touch_joy=Vector2.ZERO;motion=Vector2.ZERO
  sprint_latch=false;encounter_clear=false
  begin_gyro_calibration();update_camera()
@@ -282,6 +285,7 @@ func _process(dt: float) -> void:
  if mode == "game":
   battle_time+=dt
   player_hurt=maxf(0.0,player_hurt-dt)
+  damage_grace=maxf(0.0,damage_grace-dt)
   var input_vector := touch_joy
   input_vector.x += float(Input.is_physical_key_pressed(KEY_D))-float(Input.is_physical_key_pressed(KEY_A))
   input_vector.y += float(Input.is_physical_key_pressed(KEY_W))-float(Input.is_physical_key_pressed(KEY_S))
@@ -315,18 +319,25 @@ func _process(dt: float) -> void:
   ui_timer = maxf(0,ui_timer-dt)
  queue_redraw()
 
+func apply_enemy_damage(amount: int) -> bool:
+ if mode!="game" or player_hp<=0 or amount<=0 or damage_grace>0.0:return false
+ player_hp=maxi(0,player_hp-amount)
+ player_hurt=0.24
+ damage_grace=DAMAGE_GRACE
+ if player_hp==0:
+  Checkpoint.clear();checkpoint_available=false
+  shoot_hold=false;touch_joy=Vector2.ZERO;mode="defeat"
+  announce("РИН ВЫВЕДЕНА ИЗ БОЯ")
+ return true
+
 func update_enemies(dt: float) -> void:
  for mob in targets:
   var damage: int=mob.update(dt,pos,player_hp>0,cover_rects)
   if damage>0 and player_hp>0:
    if anim.stance=="prone" and mob.kind!=0 and mob.kind!=4: damage=maxi(1,roundi(float(damage)*0.65))
    elif anim.stance=="crouch" and mob.kind!=0 and mob.kind!=4:damage=maxi(1,roundi(float(damage)*0.8))
-   player_hp=maxi(0,player_hp-damage);player_hurt=0.24
-   if player_hp==0:
-    Checkpoint.clear();checkpoint_available=false
-    shoot_hold=false;touch_joy=Vector2.ZERO;mode="defeat"
-    announce("РИН ВЫВЕДЕНА ИЗ БОЯ")
-    break
+   apply_enemy_damage(damage)
+   if mode=="defeat":break
  # Soft separation keeps living enemies from stacking on the same point.
  for i in range(targets.size()):
   if not targets[i].living():continue
@@ -756,6 +767,14 @@ func draw_hud() -> void:
 
 func run_smoke() -> void:
  start_game(); mode="game"
+ # Simultaneous enemy strikes cause one hit, followed by a short recovery window.
+ assert(apply_enemy_damage(12) and player_hp==88)
+ assert(not apply_enemy_damage(19) and player_hp==88)
+ damage_grace=0.0
+ assert(apply_enemy_damage(8) and player_hp==80)
+ start_game();mode="game"
+ assert(damage_grace==0.0 and player_hp==100)
+ print("BLACK_SIGNAL_DAMAGE_GRACE_OK: overlapping attacks cannot stack instantly")
  anim.tick(.03,1.0,false)
  assert(anim.clip=="walk")
  anim.tick(.03,1.0,true);assert(anim.clip=="run")
