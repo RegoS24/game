@@ -19,6 +19,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Added side-view sprite mirroring hysteresis (±0.12 lateral dot threshold) to prevent left/right silhouette snapping when camera and enemy heading are nearly perpendicular. Added deterministic source/threshold regression and connected it to push CI. Earlier CI run #45085632899 passed on the preceding commit. Acceptance: new regression, headless Godot and Android emulator pass, then review recorded in-game camera sweeps; physical-device shimmer remains unverified. Does not replace warped source poses or constitute visual AAA certification.
+
+
 - 2026-11-22: Nonlethal enemy hits now enforce at least 0.30 s attack cooldown alongside 0.18 s hit-stun; interrupted windups retain their stronger 0.45 s recovery. This prevents an enemy with an expired cooldown from attacking immediately on stagger recovery. Updated existing source regression (already connected to push CI). Acceptance: source regression and Android CI pass, then verify retaliation timing in a real encounter. **New CI and on-device gameplay unverified.** Remaining: authored animations, visual shimmer, more levels, sound and physical-device QA.
 
 - 2026-11-22: Nonlethal player hits now impose 0.18 s enemy hit-stun, briefly halting pursuit and uncommitted windups; already committed attacks retain their active-frame semantics and lethal hits still take priority. Added source regression to push CI. Acceptance: regression + headless Godot + Android emulator pass, then visually inspect reaction timing, animation quality and real-device responsiveness. At commit time the new CI is unverified; no new artwork or APK release claimed. Remaining: authored directional poses, hit effects/audio, content, real-device QA.\n\n
