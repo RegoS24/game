@@ -26,6 +26,15 @@ jobs:
         run: python3 black-signal-hd2d/tests/test_gdscript_duplicate_methods.py
       - name: Validate Android lifecycle regression
         run: python3 black-signal-hd2d/tests/test_android_lifecycle.py
+      - name: Check combat AI, directional art and checkpoint safety contracts
+        working-directory: black-signal-hd2d
+        run: |
+          python3 tests/test_enemy_attack_commitment.py
+          python3 tests/test_enemy_cover_flank.py
+          python3 tests/test_enemy_hit_interrupt.py
+          python3 tests/test_enemy_hit_stun.py
+          python3 tests/test_enemy_side_mirror.py
+          python3 tests/test_checkpoint_size_guard.py
       - name: Reject escaped GDScript newlines
         working-directory: black-signal-hd2d
         run: python3 tests/test_escaped_newlines.py
