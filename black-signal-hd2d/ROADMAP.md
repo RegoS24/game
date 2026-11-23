@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: **Parser-blocking regression repaired:** previous defeat-control edit accidentally embedded literal `\\n` sequences in `scripts/main.gd` executable code and smoke assertions. Converted all 14 literal sequences to real line breaks (commit `d3438bc0`); added `tests/test_escaped_newlines.py` guard (commit `23a6df98`). Acceptance: run `python3 tests/test_escaped_newlines.py`, Godot headless import and gameplay smoke, Android export and emulator boot on latest head. **Source corrected; CI/device validation pending.** Prioritize CI wiring for guard and verify before any new APK. Authored 2D poses/shimmer and full game scope remain blocked.
+
 - 2026-11-23: Lethal damage releases held fire, joystick and aim pointers, movement and sprint before defeat; added smoke coverage for held controls and restart. Commit `a7d61ffa`. Acceptance: headless Godot smoke, Android export, emulator and real touchscreen defeat-to-restart check. **CI and device results unverified.** Authored 2D rig, shimmer, campaign and audio remain blockers.
 
 - 2026-11-23: Mission HUD now displays signed relative direction (ПРЯМО/ВЛЕВО/ВПРАВО/НАЗАД) alongside distance, using a phase-aware bearing helper; smoke assertions cover forward, left, right, and hidden combat cues. Commits `ca8403d8`, `8d001aea`. Acceptance: headless Godot smoke and Android export, then 1280×720 screenshot for HUD clipping and touchscreen navigation review. **Source updated; CI and Android runtime unverified.** Authored 2D rig, shimmer, content, audio, device QA remain blockers.
