@@ -413,8 +413,10 @@ func reload() -> void:
 # Pause immediately on focus loss/backgrounding; never resume combat automatically.
 func _notification(what: int) -> void:
  if what==NOTIFICATION_APPLICATION_PAUSED or what==NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+  # toggle_pause() already writes the checkpoint. A second write here can
+  # repeat expensive Android storage I/O while the OS is suspending us.
+  # A paused game has no new simulation state to persist on focus loss.
   if mode=="game":toggle_pause()
-  if mode=="paused":save_checkpoint()
  elif what==NOTIFICATION_APPLICATION_RESUMED:
   if mode=="paused":
    shoot_hold=false
@@ -976,6 +978,11 @@ func run_smoke() -> void:
  assert(mode=="game")
  _notification(NOTIFICATION_WM_WINDOW_FOCUS_OUT)
  assert(mode=="paused")
+ # Repeated focus-loss/pause notifications must be idempotent for gameplay.
+ _notification(NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+ _notification(NOTIFICATION_APPLICATION_PAUSED)
+ assert(mode=="paused" and not shoot_hold and touch_joy==Vector2.ZERO)
+ assert(player_hp==background_hp and ammo==background_ammo and pos==background_pos)
  toggle_pause()
  print("BLACK_SIGNAL_ANDROID_LIFECYCLE_OK: background/focus loss pauses; no auto-resume")
  var probe: Dictionary=checkpoint_data()
