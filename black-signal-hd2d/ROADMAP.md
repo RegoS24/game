@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Combat fairness: overlapping enemy attacks now share a 0.45-second damage grace window, preventing multiple simultaneous hits from stacking on Rin. New headless smoke assertions verify first-hit damage, suppression of immediate follow-up damage, expiry and reset on a new run. Commit `84a53611`. Acceptance: Godot smoke, Android export/emulator boot and physical-device combat review. **CI and visual/device behavior unverified at commit time.** This does not address authored sprite poses, shimmer, campaign breadth or audio.
+
 - 2026-11-23: Fixed Android pause/resume control safety: `toggle_pause()` now clears the latched sprint toggle alongside held touch movement/fire, preventing unintended sprint on explicit resume. Headless Godot gameplay smoke now sets sprint latch before pause and asserts it is released. Commit `ba85cb02`. Acceptance: current-head Actions Godot smoke and Android emulator pass, then physical-device Home/app-switch testing. **CI and device behavior unverified at commit time.** No new art/content or APK release; priority remains authored directional Rin/mob poses, shimmer and campaign depth.
 
 
