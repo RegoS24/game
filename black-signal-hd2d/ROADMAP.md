@@ -19,6 +19,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Hardened Chapter 01 checkpoint restoration: enemy HP must not exceed the corresponding archetype's authored maximum (raider 3, guard 4, brute 8, hacker 3, hound 3, drone 4). Added six per-archetype invalid-save assertions to the existing headless Godot smoke. Commits `318db882` and `adf13d1b`. Acceptance: latest push Actions headless smoke, Android export and emulator boot pass; verify save/resume on physical devices. At commit time these results are **unverified**. This is save integrity work, not a graphics or gameplay-content milestone. Remaining priority: authored Rin/mob poses and shimmer review, content, audio, accessibility, Android QA.
+
+
 - 2026-11-23: Added side-view sprite mirroring hysteresis (±0.12 lateral dot threshold) to prevent left/right silhouette snapping when camera and enemy heading are nearly perpendicular. Added deterministic source/threshold regression and connected it to push CI. Earlier CI run #45085632899 passed on the preceding commit. Acceptance: new regression, headless Godot and Android emulator pass, then review recorded in-game camera sweeps; physical-device shimmer remains unverified. Does not replace warped source poses or constitute visual AAA certification.
 
 
