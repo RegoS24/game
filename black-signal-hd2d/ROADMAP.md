@@ -162,3 +162,11 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 - Added `tests/test_enemy_cover_flank.py` and a push-triggered workflow step. Commits `d6adb52`, `aba180c`, `7650443`.
 - Acceptance: regression, headless Godot smoke, Android export and emulator launch all pass; inspect real encounters to ensure enemies do not walk through cover or oscillate near crates. **CI and physical Android results not yet verified.**
 - Remaining blockers: authored Rin/enemy directional 2D rigs and shimmer, more missions/content, audio, accessibility and real-device performance QA.
+
+
+### 2026-11-23 — Checkpoint mission-state integrity
+- Added reachability checks to `scripts/checkpoint.gd`: EXTRACT requires all six kills; ELIMINATE cannot coexist with six kills. SCAN remains permissive because enemies may die before terminal interaction.
+- Added Godot smoke regressions for both impossible phase/kill combinations in `scripts/main.gd`.
+- Acceptance: headless smoke reports `BLACK_SIGNAL_CHECKPOINT_SMOKE_OK`; Android export and emulator launch complete in CI. CI result pending at commit time; do not claim physical-device validation.
+- Remaining blockers: authored 2D gait and directional silhouettes, temporal shimmer, physical-device touch/gyro validation, narrative/content depth, audio mix, performance profiling and release QA.
+- Next independent task: inspect emulator screenshot artifacts and replace the worst offending authored Rin/mob poses rather than synthesizing extra in-between frames.
