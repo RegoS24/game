@@ -19,6 +19,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Android background/focus-loss handler now performs only one checkpoint write when transitioning from gameplay to pause (the pause routine already persists state); redundant write on every subsequent focus-loss notification removed. Expanded headless gameplay smoke to exercise repeated focus-loss and application-pause notifications without resuming combat or mutating HP/ammo/position. Commit `1d6b8486`. Acceptance: current-head GitHub Actions Godot smoke + APK export/emulator boot pass; physical Android app-switch and storage-interruption tests still required. **CI, APK and on-device behavior unverified at commit time.** Gameplay and art unchanged; remaining blockers are authored Rin/mob poses, shimmer, campaign breadth, audio and device QA.
+
+
 - 2026-11-23: Added a fast, deterministic duplicate-method regression gate for every GDScript file after the previous `_notification` collision prevented parsing. Commits `c017ba95`, `cb15f548`. CI now checks duplicate top-level `func`/`static func` declarations immediately after checkout, before downloading Godot/Android SDK. Acceptance: new push CI runs this test and subsequently completes Godot import, gameplay smoke, APK export and emulator launch. **Current CI/APK result not verified; no gameplay or artwork changed.** Priority remains approved directional Rin/mob poses, shimmer-free rendering, content, audio and physical-device QA.
 
 
