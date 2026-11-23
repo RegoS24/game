@@ -58,6 +58,11 @@ func marker_position() -> Vector2:
 func in_range(player: Vector2) -> bool:
  return has_marker() and player.distance_to(marker_position())<=INTERACTION_RANGE
 
+# World-space navigation cue shared by HUD and tests; no false marker in combat.
+func objective_distance(player: Vector2) -> float:
+ if not has_marker():return -1.0
+ return player.distance_to(marker_position())
+
 func register_kills(count: int) -> bool:
  if phase==Phase.ELIMINATE and count>=REQUIRED_KILLS:
   phase=Phase.EXTRACT
