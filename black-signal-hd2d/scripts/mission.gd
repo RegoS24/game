@@ -86,11 +86,19 @@ func interact(player: Vector2,kills: int,elapsed: float,persist: bool=true) -> S
   if kills>=REQUIRED_KILLS:phase=Phase.EXTRACT
   return "ДАННЫЕ СИГНАЛА ПОЛУЧЕНЫ"
  if phase==Phase.EXTRACT and kills>=REQUIRED_KILLS:
+  # Keep the completed mission visible even if persistent storage is full.
+  # The record itself is transactional: do not show an unsaved personal best
+  # as if it had been committed to Android storage.
+  var previous_best: float=best_seconds
+  var previous_runs: int=completed_runs
   phase=Phase.COMPLETE
   mission_elapsed=maxf(0.0,elapsed)
   completed_runs=mini(completed_runs+1,2147483646)
   if best_seconds<0.0 or mission_elapsed<best_seconds:best_seconds=mission_elapsed
-  if persist and not save_record():return "ЭВАКУАЦИЯ ВЫПОЛНЕНА — ПРОГРЕСС НЕ СОХРАНЁН"
+  if persist and not save_record():
+   best_seconds=previous_best
+   completed_runs=previous_runs
+   return "ЭВАКУАЦИЯ ВЫПОЛНЕНА — ПРОГРЕСС НЕ СОХРАНЁН"
   return "МИССИЯ ЗАВЕРШЕНА"
  return ""
 
