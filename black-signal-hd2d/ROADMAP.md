@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Mission navigation now shows live world-space distance to the active scan terminal or extraction point; combat phase and completed missions show no misleading distance. Added phase-transition assertions to existing headless gameplay smoke. Commits `09a09c00`, `3c2da40e`. Acceptance: headless Godot smoke, Android export and actual 1280×720 HUD screenshot confirming text legibility and non-overlap. **Source updated; CI, APK and device validation pending.** Art quality, shimmer, authored animation, broader campaign and audio remain blocked.
+
 - 2026-11-23: Paused-screen touch 'ЛОББИ' now calls the shared `activate("back")` cleanup instead of bypassing it; added headless regression for held fire, joystick, aim pointer, motion and sprint. Commit `6d79abbb`. Acceptance: Godot smoke and Android export/emulator, then real touchscreen pause→lobby test. **Runtime/CI not yet confirmed.** No new art or release; priority remains authored animation, shimmer, campaign content and audio.
 
 - 2026-11-23: Returning from active combat to the lobby now releases all touch pointer IDs, held fire, joystick motion and sprint latch. Added Godot smoke assertions for the full transition. Commit `dbaea28d`. Acceptance: current-head CI Godot smoke, Android APK export/emulator and physical device navigation test. **Not yet runtime-verified.** Art/animation and gameplay-content blockers remain.
