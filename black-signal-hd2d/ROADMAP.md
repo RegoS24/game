@@ -19,6 +19,9 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Fixed Android pause/resume control safety: `toggle_pause()` now clears the latched sprint toggle alongside held touch movement/fire, preventing unintended sprint on explicit resume. Headless Godot gameplay smoke now sets sprint latch before pause and asserts it is released. Commit `ba85cb02`. Acceptance: current-head Actions Godot smoke and Android emulator pass, then physical-device Home/app-switch testing. **CI and device behavior unverified at commit time.** No new art/content or APK release; priority remains authored directional Rin/mob poses, shimmer and campaign depth.
+
+
 - 2026-11-23: Android background/focus-loss handler now performs only one checkpoint write when transitioning from gameplay to pause (the pause routine already persists state); redundant write on every subsequent focus-loss notification removed. Expanded headless gameplay smoke to exercise repeated focus-loss and application-pause notifications without resuming combat or mutating HP/ammo/position. Commit `1d6b8486`. Acceptance: current-head GitHub Actions Godot smoke + APK export/emulator boot pass; physical Android app-switch and storage-interruption tests still required. **CI, APK and on-device behavior unverified at commit time.** Gameplay and art unchanged; remaining blockers are authored Rin/mob poses, shimmer, campaign breadth, audio and device QA.
 
 
