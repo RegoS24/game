@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-24: Recovered the actual nested Godot project path (`black-signal-hd2d/`); previous root-level 404 was a path error, not a missing project. Extended the push-time source guard to execute six existing enemy AI, hit-stun, attack commitment, directional sprite and checkpoint-size regression scripts (commit `6f7dfb07`). Acceptance: new source-guard run passes on this commit and the next native Godot/Android workflow succeeds. Previous native run #45274150254 and source-guard run #45274150141 passed at head `927b8b6`; new head CI not yet verified. This is test coverage only, not new playable content or proof of visual quality. Next independently deliver authored locomotion poses or a segmented 2D rig with runtime captures, then expand level/story/audio content. Physical Android device and shimmer QA remain open.
+
 - 2026-11-23: Fast push guard now executes duplicate GDScript method and Android lifecycle regressions, in addition to Python compileall and escaped-newline check (commit `688f195b`). Previous source guard run #45263756807 and native build #45253422635 passed. Acceptance: new source guard run succeeds on this commit; next native build verifies Godot import, gameplay smoke, APK export and emulator. No art or gameplay change; authored 2D poses/shimmer, campaign content, audio and device QA remain open.
 
 
