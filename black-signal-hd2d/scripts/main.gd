@@ -1079,6 +1079,16 @@ func run_smoke() -> void:
   invalid_probe=probe.duplicate(true)
   invalid_probe["enemies"][enemy_kind]["hp"]=int(Mob.STATS[enemy_kind][0])+1
   assert(not Checkpoint.validate(invalid_probe))
+ # A resumed mission must never have an impossible kill/phase combination.
+ invalid_probe=probe.duplicate(true)
+ invalid_probe["phase"]=Mission.Phase.EXTRACT
+ invalid_probe["kills"]=0
+ assert(not Checkpoint.validate(invalid_probe))
+ invalid_probe=probe.duplicate(true)
+ invalid_probe["phase"]=Mission.Phase.ELIMINATE
+ invalid_probe["kills"]=6
+ for enemy in invalid_probe["enemies"]:enemy["hp"]=0
+ assert(not Checkpoint.validate(invalid_probe))
  invalid_probe=probe.duplicate(true)
  invalid_probe["ammo"]=INF
  assert(not Checkpoint.validate(invalid_probe))
