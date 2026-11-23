@@ -1031,7 +1031,15 @@ func run_smoke() -> void:
  assert(not Checkpoint.validate(invalid_probe))
  probe["hp"]=0
  assert(not Checkpoint.validate(probe))
+ # An interrupted write must not survive an explicit checkpoint reset.
+ var staging_path: String=probe_path+".tmp"
+ var staging_file:=FileAccess.open(staging_path,FileAccess.WRITE)
+ assert(staging_file!=null)
+ staging_file.store_string("interrupted save")
+ staging_file.close()
+ assert(FileAccess.file_exists(staging_path))
  Checkpoint.clear(probe_path)
+ assert(not FileAccess.file_exists(staging_path))
  assert(Checkpoint.read(probe_path).is_empty())
  print("BLACK_SIGNAL_CHECKPOINT_SMOKE_OK: roundtrip, invalid HP, cleanup")
  # Objective tests must not modify player records in user://.
