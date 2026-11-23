@@ -735,7 +735,14 @@ func draw_hud() -> void:
  panel(Rect2(380,120,503,61))
  text_at(Vector2(394,147),mission.objective_text(kills),16,CYAN)
  var objective_meters: float=mission.objective_distance(pos)
- var objective_hint: String="   •   Цель: %d м"%ceili(objective_meters) if objective_meters>=0.0 else ""
+ var objective_hint: String=""
+ if objective_meters>=0.0:
+  var bearing: float=mission.objective_bearing(pos,forward)
+  var direction: String="ПРЯМО"
+  if bearing>0.35:direction="ВПРАВО"
+  elif bearing< -0.35:direction="ВЛЕВО"
+  elif absf(bearing)>2.75:direction="НАЗАД"
+  objective_hint="   •   Цель: %d м / %s"%[ceili(objective_meters),direction]
  text_at(Vector2(394,169),"Время: %.1f с%s"%[battle_time,objective_hint],13,GOLD)
  var deg: int=posmod(int(rad_to_deg(yaw)),360);text_at(Vector2(575,35),"N  ·  %03d°"%deg,20,GOLD);draw_line(Vector2(460,47),Vector2(820,47),Color(0.8,0.8,0.86,.6),1)
  panel(Rect2(1110,16,144,130));text_at(Vector2(1120,37),"СЕКТОР 07",14,GOLD);draw_rect(Rect2(1154,46,55,90),Color("354257"));draw_line(Vector2(1181,46),Vector2(1181,136),Color("808d9d"),1)
@@ -780,7 +787,13 @@ func run_smoke() -> void:
  var navigation=Mission.new()
  assert(is_equal_approx(navigation.objective_distance(Mission.TERMINAL),0.0))
  assert(navigation.objective_distance(Mission.EXFIL)>100.0)
+ # Bearing is signed relative to forward: right positive, left negative.
+ navigation.phase=Mission.Phase.SCAN
+ assert(absf(navigation.objective_bearing(Mission.TERMINAL-Vector2(0,10),Vector2(0,1)))<0.001)
+ assert(navigation.objective_bearing(Mission.TERMINAL-Vector2(10,0),Vector2(0,1))>1.5)
+ assert(navigation.objective_bearing(Mission.TERMINAL+Vector2(10,0),Vector2(0,1))< -1.5)
  navigation.phase=Mission.Phase.ELIMINATE
+ assert(navigation.objective_bearing(Mission.TERMINAL-Vector2(10,0),Vector2(0,1))==0.0)
  assert(navigation.objective_distance(Mission.TERMINAL)<0.0)
  navigation.phase=Mission.Phase.EXTRACT
  assert(is_equal_approx(navigation.objective_distance(Mission.EXFIL),0.0))
