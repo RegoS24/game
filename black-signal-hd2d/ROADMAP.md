@@ -19,6 +19,8 @@ Last reviewed 2026-11-21. This is a development project, not an AAA release. God
 
 ## History
 
+- 2026-11-23: Checkpoint staging-file hygiene: remove failed-write `.tmp` files and clear interrupted staging files on explicit checkpoint reset. Added headless smoke assertion creating an interrupted staging file and verifying reset deletes it. Commits `dd65c50e`, `cae7d539`. Acceptance: headless Godot smoke, Android export and emulator boot succeed on this head; verify save/reset on physical Android. **CI and hardware behavior not yet verified.** No visual/animation changes. Remaining blockers: authored Rin/enemy poses, shimmer, content/audio, device QA.
+
 - 2026-11-23: Hardened Chapter 01 checkpoint restoration: enemy HP must not exceed the corresponding archetype's authored maximum (raider 3, guard 4, brute 8, hacker 3, hound 3, drone 4). Added six per-archetype invalid-save assertions to the existing headless Godot smoke. Commits `318db882` and `adf13d1b`. Acceptance: latest push Actions headless smoke, Android export and emulator boot pass; verify save/resume on physical devices. At commit time these results are **unverified**. This is save integrity work, not a graphics or gameplay-content milestone. Remaining priority: authored Rin/mob poses and shimmer review, content, audio, accessibility, Android QA.
 
 
