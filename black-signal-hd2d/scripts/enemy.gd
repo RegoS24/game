@@ -198,6 +198,9 @@ func source_rect(state: int,t: float) -> Rect2:
 # Keep a small directional deadband so tiny camera/heading changes do not
 # rapidly alternate between distinct authored silhouettes at view boundaries.
 var last_view: int=SIDE
+# Keep the side-facing silhouette stable near a perpendicular camera angle.
+var last_side_right: bool=true
+const SIDE_FLIP_DEADBAND: float=0.12
 
 func view_for(to_camera: Vector2) -> int:
  if to_camera.length_squared()<0.000001:return last_view
@@ -228,7 +231,10 @@ func draw_pose(canvas: CanvasItem,foot: Vector2,dst: Rect2,view: int,state: int,
  var flip: float=1.0
  if view==SIDE and state!=5:
   var authored_right: bool=kind==1 or kind==2 or kind==3
-  flip=1.0 if (heading.dot(camera_right)>0.0)==authored_right else -1.0
+  var lateral: float=heading.dot(camera_right.normalized()) if camera_right.length_squared()>0.000001 else 0.0
+  if lateral>SIDE_FLIP_DEADBAND:last_side_right=true
+  elif lateral< -SIDE_FLIP_DEADBAND:last_side_right=false
+  flip=1.0 if last_side_right==authored_right else -1.0
  canvas.draw_set_transform(foot,0,Vector2(flip,1.0))
  canvas.draw_texture_rect_region(texture,dst,packed_rect(view,state,t),tint)
  canvas.draw_set_transform(Vector2.ZERO)
