@@ -158,7 +158,9 @@ func update(dt: float, player: Vector2, player_alive: bool, obstacles: Array[Rec
   var running: bool=distance>reach+3.4
   set_clip(RUN if running else WALK)
   var speed: float=float(STATS[kind][2] if running else STATS[kind][1])
-  var step: float=minf(speed*dt,maxf(0.0,distance-reach*0.81))
+  # When cover blocks a shot inside weapon range, approach to find a flank.
+  var standoff: float=0.0 if blocked else reach*0.81
+  var step: float=minf(speed*dt,maxf(0.0,distance-standoff))
   if step>0.0001:
    var before: Vector2=p
    var candidate: Vector2=Cover.move_circle(p,rel.normalized()*step,radius(),obstacles)
